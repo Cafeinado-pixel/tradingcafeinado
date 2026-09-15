@@ -1,0 +1,2494 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Simulador de treino de leitura de candles com gráficos ao vivo do TradingView: modo guiado Cafeinado, treino de entrada, desafio em R e replay de mercado.">
+<meta name="theme-color" content="#080b10">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
+<style>
+  html { color-scheme: dark; background: #080b10; -webkit-text-size-adjust: 100%; }
+  body { margin: 0; }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Treino de Entrada M1 Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #080b10;
+    --panel: #111823;
+    --panel-2: #151d2a;
+    --border: #222c3a;
+    --border-soft: #1a2230;
+    --text: #e9ecf1;
+    --muted: #8794a6;
+    --muted-dim: #5a6576;
+    --bull: #26a17b;
+    --bull-soft: rgba(38, 161, 123, 0.13);
+    --bear: #e2574c;
+    --bear-soft: rgba(226, 87, 76, 0.13);
+    --gold: #c9a227;
+    --gold-light: #e8c468;
+    --gold-soft: rgba(201, 162, 39, 0.12);
+    --steel: #5b6b82;
+    --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(ellipse 1100px 520px at 50% -12%, rgba(201, 162, 39, 0.07), transparent 62%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 30px),
+      var(--ink);
+    color: var(--text);
+    font-family: var(--font-sans);
+    padding-block: 20px 44px;
+    padding-left: 16px; padding-right: 16px;
+    min-height: 100vh;
+  }
+  .shell { max-width: 1180px; margin: 0 auto; }
+
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+    padding-bottom: 13px; border-bottom: 1px solid var(--border-soft);
+  }
+  .brand { display: flex; align-items: center; gap: 9px; }
+  .brand-mark {
+    font-family: var(--font-mono); font-weight: 700; font-size: 12px; letter-spacing: 0.04em;
+    color: var(--ink); background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    padding: 4px 7px; border-radius: 4px;
+  }
+  .brand-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted-dim); letter-spacing: 0.09em; text-transform: uppercase; }
+  .nav { display: flex; gap: 5px; flex-wrap: wrap; }
+  .nav button {
+    font-family: var(--font-sans); font-size: 12.5px; font-weight: 600;
+    color: var(--muted); background: none; border: 1px solid var(--border-soft);
+    padding: 7px 12px; border-radius: 100px; cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .nav button:hover { color: var(--text); border-color: var(--border); }
+  .nav button.active { color: var(--gold-light); border-color: rgba(201,162,39,0.45); background: var(--gold-soft); }
+
+  .work { display: grid; grid-template-columns: minmax(0,1fr) 274px; gap: 16px; align-items: start; }
+  @media (max-width: 920px) { .work { grid-template-columns: minmax(0,1fr); } }
+  .rail { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--border); border-radius: 10px; }
+  .card-pad { padding: 14px 16px; }
+
+  .chart-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 13px; border-bottom: 1px solid var(--border-soft); }
+  .sym { font-family: var(--font-mono); font-size: 13px; font-weight: 600; letter-spacing: 0.03em; }
+  .chip {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border-soft); color: var(--muted); background: rgba(0,0,0,0.2);
+  }
+  .chip.easy { color: var(--bull); border-color: rgba(38,161,123,0.4); background: var(--bull-soft); }
+  .chip.medium { color: var(--gold-light); border-color: rgba(201,162,39,0.4); background: var(--gold-soft); }
+  .chip.hard { color: var(--bear); border-color: rgba(226,87,76,0.4); background: var(--bear-soft); }
+  .chip.tf { color: var(--text); }
+  .live-flag { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.09em; color: var(--bear); text-transform: uppercase; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bear); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .head-right { margin-left: auto; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+  .mini-btn {
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.03em;
+    color: var(--muted); background: none; border: 1px solid var(--border-soft);
+    padding: 4px 9px; border-radius: 4px; cursor: pointer; white-space: nowrap;
+  }
+  .mini-btn:hover { color: var(--text); border-color: var(--border); }
+  .mini-btn.on { color: var(--gold-light); border-color: rgba(201,162,39,0.45); background: var(--gold-soft); }
+  .zoom-ctl { display: flex; align-items: center; gap: 4px; border: 1px solid var(--border-soft); border-radius: 4px; padding: 2px; }
+  .zoom-ctl button {
+    font-family: var(--font-mono); font-size: 12px; line-height: 1; color: var(--muted);
+    background: none; border: none; cursor: pointer; padding: 3px 7px; border-radius: 3px;
+  }
+  .zoom-ctl button:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+  .zoom-ctl span { font-family: var(--font-mono); font-size: 10px; color: var(--muted-dim); padding: 0 3px; min-width: 26px; text-align: center; }
+  .chart-body { padding: 8px 8px 4px; position: relative; }
+  svg.chart { display: block; width: 100%; height: auto; touch-action: pan-y; }
+  .pattern-reveal { font-family: var(--font-mono); font-size: 11px; color: var(--muted); padding: 0 14px 11px; display: flex; align-items: center; gap: 8px; }
+  .pattern-reveal .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+
+  .controls { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .ctrl {
+    flex: 1 1 130px; display: flex; align-items: center; justify-content: center; gap: 7px;
+    font-family: var(--font-sans); font-size: 14px; font-weight: 600;
+    padding: 14px 8px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  }
+  .ctrl svg { width: 13px; height: 13px; flex-shrink: 0; }
+  .ctrl kbd { font-family: var(--font-mono); font-size: 9.5px; color: var(--muted-dim); border: 1px solid var(--border); border-radius: 3px; padding: 1px 4px; margin-left: 2px; }
+  .ctrl:hover:not(:disabled) { transform: translateY(-1px); }
+  .ctrl:disabled { opacity: 0.32; cursor: default; transform: none; }
+  .ctrl.buy svg { color: var(--bull); }
+  .ctrl.sell svg { color: var(--bear); }
+  .ctrl.wait svg { color: var(--gold-light); }
+  .ctrl.buy:hover:not(:disabled) { border-color: var(--bull); background: var(--bull-soft); }
+  .ctrl.sell:hover:not(:disabled) { border-color: var(--bear); background: var(--bear-soft); }
+  .ctrl.wait:hover:not(:disabled) { border-color: var(--gold); background: var(--gold-soft); }
+  .hint { font-size: 11.5px; color: var(--muted-dim); margin: 9px 2px 0; line-height: 1.5; }
+
+  .fb { margin-top: 12px; border-radius: 10px; border: 1px solid var(--border); overflow: hidden; }
+  .fb-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 11px 14px; font-size: 13.5px; font-weight: 600; border-bottom: 1px solid var(--border-soft); }
+  .fb.ok .fb-head { color: var(--bull); background: var(--bull-soft); }
+  .fb.no .fb-head { color: var(--bear); background: var(--bear-soft); }
+  .fb.neutral .fb-head { color: var(--gold-light); background: var(--gold-soft); }
+  .fb-body { padding: 13px 14px; font-size: 13px; line-height: 1.6; }
+  .fb-body p { margin: 0 0 10px; }
+  .fb-body p:last-child { margin-bottom: 0; }
+  .fb-tip { border-left: 2px solid var(--gold); background: var(--gold-soft); padding: 9px 12px; border-radius: 0 6px 6px 0; color: var(--muted); font-size: 12.5px; }
+  .fb-tip strong { color: var(--gold-light); font-weight: 600; }
+  .result-chip { font-family: var(--font-mono); font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--border-soft); color: var(--muted); margin-left: auto; }
+  .result-chip.up { color: var(--bull); border-color: rgba(38,161,123,0.4); }
+  .result-chip.down { color: var(--bear); border-color: rgba(226,87,76,0.4); }
+  .next-btn {
+    width: 100%; font-family: var(--font-sans); font-size: 13.5px; font-weight: 600;
+    padding: 13px; border-radius: 8px; border: 1px solid rgba(201,162,39,0.4);
+    background: var(--gold-soft); color: var(--gold-light); cursor: pointer; margin-top: 10px; transition: background 0.15s ease;
+  }
+  .next-btn:hover { background: rgba(201,162,39,0.2); }
+  .ghost-btn {
+    width: 100%; font-family: var(--font-sans); font-size: 12.5px; font-weight: 600;
+    padding: 11px; border-radius: 8px; border: 1px solid var(--border-soft);
+    background: none; color: var(--muted); cursor: pointer; margin-top: 8px;
+  }
+  .ghost-btn:hover { color: var(--text); border-color: var(--border); }
+
+  .rail-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted-dim); margin: 0 0 11px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-label { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted-dim); }
+  .stat-value { font-family: var(--font-mono); font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat-value.gold { color: var(--gold-light); }
+  .stat-value.up { color: var(--bull); }
+  .stat-value.down { color: var(--bear); }
+  .stat-sub { font-family: var(--font-mono); font-size: 10px; color: var(--muted-dim); }
+  .meta-list { display: flex; flex-direction: column; gap: 7px; }
+  .meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; gap: 8px; }
+  .meta-row span:first-child { color: var(--muted-dim); }
+  .meta-row span:last-child { font-family: var(--font-mono); color: var(--text); font-size: 11.5px; text-align: right; }
+  .look-list { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 7px; }
+  .look-list li { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .look-list li::marker { color: var(--gold); }
+
+  .trade-log { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+  .trade-row {
+    display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px;
+    padding: 7px 9px; border: 1px solid var(--border-soft); border-radius: 6px; background: rgba(0,0,0,0.18);
+  }
+  .trade-side { font-weight: 600; }
+  .trade-side.buy { color: var(--bull); }
+  .trade-side.sell { color: var(--bear); }
+  .trade-r { margin-left: auto; font-weight: 600; }
+  .trade-r.up { color: var(--bull); }
+  .trade-r.down { color: var(--bear); }
+  .empty-log { font-size: 12px; color: var(--muted-dim); line-height: 1.5; margin: 0; }
+
+  .cfg-group { margin-bottom: 20px; }
+  .cfg-label { font-size: 12.5px; font-weight: 600; margin: 0 0 4px; }
+  .cfg-desc { font-size: 12px; color: var(--muted-dim); margin: 0 0 10px; line-height: 1.5; }
+  .opt-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt {
+    font-family: var(--font-sans); font-size: 12.5px; font-weight: 600;
+    padding: 9px 14px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--muted); cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .opt:hover { color: var(--text); }
+  .opt.sel { color: var(--text); border-color: var(--gold); background: var(--gold-soft); }
+  .mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 9px; }
+  .mode-card {
+    text-align: left; font-family: var(--font-sans); cursor: pointer;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 9px; padding: 12px 13px;
+    color: var(--text); transition: border-color 0.15s ease, transform 0.1s ease;
+  }
+  .mode-card:hover { transform: translateY(-1px); border-color: var(--steel); }
+  .mode-card.sel { border-color: var(--gold); background: var(--gold-soft); }
+  .mode-card b { display: block; font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .mode-card span { font-size: 11.5px; color: var(--muted); line-height: 1.45; display: block; }
+
+  .tips-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .tip-card { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+  .tip-card h3 { font-size: 13.5px; margin: 0 0 4px; font-weight: 600; }
+  .tip-card .tip-kicker { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin: 0 0 9px; }
+  .tip-card p { font-size: 12.8px; line-height: 1.62; color: var(--muted); margin: 0 0 10px; }
+  .tip-card p:last-child { margin-bottom: 0; }
+  .tip-card strong { color: var(--text); font-weight: 600; }
+  .tip-steps { margin: 0; padding-left: 17px; display: flex; flex-direction: column; gap: 8px; }
+  .tip-steps li { font-size: 12.8px; line-height: 1.55; color: var(--muted); }
+  .tip-steps li::marker { color: var(--gold); font-family: var(--font-mono); font-size: 11px; }
+  .tip-steps strong { color: var(--text); }
+  .intro { font-size: 13px; color: var(--muted); line-height: 1.65; max-width: 68ch; margin: 0 0 18px; }
+
+  .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .report-tile { background: var(--panel); border: 1px solid var(--border-soft); border-radius: 8px; padding: 13px; }
+  .breakdown { display: flex; flex-direction: column; gap: 11px; }
+  .bd-row { display: flex; align-items: center; gap: 11px; }
+  .bd-label { font-size: 12.2px; color: var(--muted); width: 104px; flex-shrink: 0; }
+  .bd-track { flex: 1; height: 6px; border-radius: 3px; background: var(--border-soft); overflow: hidden; min-width: 40px; }
+  .bd-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+  .bd-frac { font-family: var(--font-mono); font-size: 11px; color: var(--muted-dim); width: 42px; text-align: right; flex-shrink: 0; }
+  .caf-bar { height: 4px; background: var(--border-soft); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+  .caf-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 2px; transition: width 0.3s ease; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tab {
+    font-family: var(--font-sans); font-size: 12px; font-weight: 600;
+    padding: 7px 12px; border-radius: 100px; border: 1px solid var(--border-soft);
+    background: none; color: var(--muted); cursor: pointer;
+  }
+  .tab:hover { color: var(--text); border-color: var(--border); }
+  .tab.sel { color: var(--text); border-color: var(--gold); background: var(--gold-soft); }
+  .tab .tab-count { font-family: var(--font-mono); font-size: 10px; color: var(--muted-dim); margin-left: 5px; }
+  /* ---------- gráficos ao vivo (TradingView) ---------- */
+  #view-live { width: min(1620px, calc(100vw - 32px)); margin-left: 50%; transform: translateX(-50%); }
+  .live-cfg { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 12px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-dim); }
+  .field input, .field select {
+    font-family: var(--font-mono); font-size: 12.5px; color: var(--text);
+    background: var(--panel); border: 1px solid var(--border); border-radius: 7px; padding: 9px 10px;
+  }
+  .field input { width: 176px; }
+  .field input:focus, .field select:focus { outline: 2px solid rgba(201,162,39,0.55); outline-offset: 1px; }
+  .apply-btn {
+    font-family: var(--font-sans); font-size: 12.5px; font-weight: 600; cursor: pointer;
+    padding: 10px 16px; border-radius: 7px; border: 1px solid rgba(201,162,39,0.45);
+    background: var(--gold-soft); color: var(--gold-light);
+  }
+  .apply-btn:hover { background: rgba(201,162,39,0.2); }
+  .chk { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); cursor: pointer; padding-bottom: 9px; }
+  .chk input { accent-color: var(--gold); width: 15px; height: 15px; }
+  .live-grid { display: grid; gap: 12px; }
+  .live-grid.n1 { grid-template-columns: minmax(0, 1fr); }
+  .live-grid.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .live-grid.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 1180px) { .live-grid.n3 { grid-template-columns: minmax(0, 1fr); } }
+  @media (max-width: 880px) { .live-grid.n2 { grid-template-columns: minmax(0, 1fr); } }
+  .live-slot { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .live-slot-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border-soft); }
+  .live-slot-head .sym { font-size: 12.5px; }
+  .tv-box { width: 100%; height: 620px; }
+  .live-grid.n2 .tv-box { height: 540px; }
+  .live-grid.n3 .tv-box { height: 480px; }
+  @media (max-width: 880px) { .tv-box, .live-grid.n2 .tv-box, .live-grid.n3 .tv-box { height: 400px; } }
+  .tv-fallback { padding: 22px; text-align: center; }
+  .tv-fallback p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0 auto 10px; max-width: 54ch; }
+  .tv-fallback a { color: var(--gold-light); }
+  .caf-lead { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 0 0 10px; }
+  .caf-lead strong { color: var(--text); }
+  .caf-done { text-align: center; padding: 6px 0 2px; }
+  .section-gap { margin-top: 22px; }
+  .disclaimer { font-size: 11px; color: var(--muted-dim); text-align: center; margin: 26px 0 0; line-height: 1.5; }
+  h2.view-title { font-size: 16px; font-weight: 600; margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">M1</span>
+      <div>
+        <div class="brand-name">Treino de Entrada</div>
+        <div class="brand-sub">Simulador · desafio · replay de mercado</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button type="button" id="nav-train" class="active">Treino</button>
+      <button type="button" id="nav-caf">Cafeinado</button>
+      <button type="button" id="nav-chal">Desafio</button>
+      <button type="button" id="nav-replay">Replay</button>
+      <button type="button" id="nav-live">Ao vivo</button>
+      <button type="button" id="nav-setup">Ajustes</button>
+      <button type="button" id="nav-tips">Dicas</button>
+      <button type="button" id="nav-report">Relatório</button>
+    </nav>
+  </header>
+
+  <!-- ============ TREINO ============ -->
+  <section id="view-train" class="view">
+    <div class="work">
+      <div>
+        <div class="card">
+          <div class="chart-head">
+            <span class="sym">SIMUL</span>
+            <span class="chip tf" id="t-chip-tf">M5</span>
+            <span class="chip" id="t-chip-mode">Misto</span>
+            <span class="chip medium" id="t-chip-level">Médio</span>
+            <span class="live-flag" id="t-live-flag" hidden><span class="live-dot"></span>Ao vivo</span>
+            <div class="head-right">
+              <div class="zoom-ctl">
+                <button type="button" id="t-zoom-out" aria-label="Afastar">−</button>
+                <span id="t-zoom-lbl">46</span>
+                <button type="button" id="t-zoom-in" aria-label="Aproximar">+</button>
+              </div>
+              <button class="mini-btn" id="t-pause" type="button" hidden>Pausar</button>
+              <button class="mini-btn" id="t-speed" type="button" hidden>1×</button>
+              <button class="mini-btn" id="t-live" type="button">Ligar tempo real</button>
+            </div>
+          </div>
+          <div class="chart-body"><div id="t-chart"></div></div>
+          <div class="pattern-reveal" id="t-pattern" hidden><span class="dot"></span><span id="t-pattern-text"></span></div>
+        </div>
+
+        <div class="controls" id="t-controls">
+          <button id="t-buy" class="ctrl buy" type="button">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5L10.5 9H1.5L6 1.5Z" fill="currentColor"/></svg>
+            Comprar <kbd>C</kbd>
+          </button>
+          <button id="t-sell" class="ctrl sell" type="button">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 10.5L1.5 3H10.5L6 10.5Z" fill="currentColor"/></svg>
+            Vender <kbd>V</kbd>
+          </button>
+          <button id="t-wait" class="ctrl wait" type="button">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="1.5" width="2.4" height="9" rx="0.6" fill="currentColor"/><rect x="7.1" y="1.5" width="2.4" height="9" rx="0.6" fill="currentColor"/></svg>
+            <span id="t-wait-label">Esperar</span> <kbd>E</kbd>
+          </button>
+        </div>
+        <p class="hint" id="t-hint"></p>
+        <div id="t-fb"></div>
+        <div id="t-next"></div>
+      </div>
+
+      <aside class="rail">
+        <div class="card card-pad">
+          <p class="rail-title">Sessão de treino</p>
+          <div class="stat-grid">
+            <div class="stat">
+              <span class="stat-label">Aproveitamento</span>
+              <span class="stat-value" id="s-pct">—</span>
+              <span class="stat-sub" id="s-frac">0/0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Sequência</span>
+              <span class="stat-value gold" id="s-streak">0</span>
+              <span class="stat-sub" id="s-best">melhor: 0</span>
+            </div>
+          </div>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">Configuração</p>
+          <div class="meta-list">
+            <div class="meta-row"><span>Estilo</span><span id="m-style">Day trade</span></div>
+            <div class="meta-row"><span>Modo</span><span id="m-mode">Misto</span></div>
+            <div class="meta-row"><span>Timeframe</span><span id="m-tf">M5</span></div>
+            <div class="meta-row"><span>Nível</span><span id="m-level">Médio</span></div>
+            <div class="meta-row"><span>Gráfico</span><span id="m-chart">Estático</span></div>
+          </div>
+          <button class="ghost-btn" id="btn-open-setup" type="button">Mudar treino</button>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">O que procurar</p>
+          <ul class="look-list" id="look-list"></ul>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">Atalhos</p>
+          <p class="hint" style="margin:0">C comprar · V vender · E esperar · N próxima · Espaço pausa · + e − zoom · ← → move o gráfico.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ CAFEINADO ============ -->
+  <section id="view-caf" class="view" hidden>
+    <div class="tabs">
+      <button type="button" class="tab sel" data-cat="buy" id="tab-buy">Compras <span class="tab-count">1–10</span></button>
+      <button type="button" class="tab" data-cat="sell" id="tab-sell">Vendas <span class="tab-count">11–20</span></button>
+      <button type="button" class="tab" data-cat="brk" id="tab-brk">Saídas de consolidação <span class="tab-count">21–30</span></button>
+    </div>
+    <div class="work">
+      <div>
+        <div class="card">
+          <div class="chart-head">
+            <span class="sym">SIMUL</span>
+            <span class="chip tf" id="k-chip-tf">M1</span>
+            <span class="chip" id="k-chip-cat">Compra</span>
+            <span class="chip" id="k-chip-step">1 / 30</span>
+            <span class="live-flag" id="k-flag" hidden><span class="live-dot"></span>Rodando</span>
+            <div class="head-right">
+              <div class="zoom-ctl">
+                <button type="button" id="k-zoom-out" aria-label="Afastar">−</button>
+                <span id="k-zoom-lbl">46</span>
+                <button type="button" id="k-zoom-in" aria-label="Aproximar">+</button>
+              </div>
+              <button class="mini-btn" id="k-prev" type="button">⏮ Anterior</button>
+              <button class="mini-btn" id="k-play" type="button">▶ Rodar série</button>
+              <button class="mini-btn" id="k-next" type="button">⏭ Próximo</button>
+              <button class="mini-btn" id="k-speed" type="button">1×</button>
+            </div>
+          </div>
+          <div class="chart-body"><div id="k-chart"></div></div>
+          <div class="pattern-reveal" id="k-pattern" hidden><span class="dot"></span><span id="k-pattern-text"></span></div>
+        </div>
+        <div class="caf-bar"><div class="caf-fill" id="k-progress"></div></div>
+        <div id="k-fb"></div>
+      </div>
+
+      <aside class="rail">
+        <div class="card card-pad">
+          <p class="rail-title">Cafeinado</p>
+          <p class="caf-lead">Trinta pontos de entrada, marcados na tela enquanto o gráfico roda. Você não decide nada aqui — só treina o olho para reconhecer o formato do setup antes do candle fechar.</p>
+          <div class="meta-list">
+            <div class="meta-row"><span>Exemplo</span><span id="k-meta-step">1 / 30</span></div>
+            <div class="meta-row"><span>Timeframe</span><span id="k-meta-tf">M1</span></div>
+            <div class="meta-row"><span>Categoria</span><span id="k-meta-cat">Compra</span></div>
+          </div>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">Leitura do exemplo</p>
+          <div id="k-read"><p class="empty-log">Aperte "Rodar série" para começar.</p></div>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">Série</p>
+          <div class="meta-list">
+            <div class="meta-row"><span>Compras vistas</span><span id="k-seen-buy">0 / 10</span></div>
+            <div class="meta-row"><span>Vendas vistas</span><span id="k-seen-sell">0 / 10</span></div>
+            <div class="meta-row"><span>Consolidações</span><span id="k-seen-brk">0 / 10</span></div>
+          </div>
+          <button class="ghost-btn" id="k-restart" type="button">Recomeçar a série</button>
+          <p class="hint" style="margin-top:8px">Modo demonstração: os resultados daqui não entram no relatório.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ DESAFIO ============ -->
+  <section id="view-chal" class="view" hidden>
+    <div class="work">
+      <div>
+        <div class="card">
+          <div class="chart-head">
+            <span class="sym">SIMUL</span>
+            <span class="chip tf" id="c-chip-tf">M5</span>
+            <span class="chip" id="c-chip-style">Day trade</span>
+            <span class="chip medium" id="c-chip-level">Médio</span>
+            <span class="live-flag" id="c-running" hidden><span class="live-dot"></span>Operação aberta</span>
+            <div class="head-right">
+              <div class="zoom-ctl">
+                <button type="button" id="c-zoom-out" aria-label="Afastar">−</button>
+                <span id="c-zoom-lbl">46</span>
+                <button type="button" id="c-zoom-in" aria-label="Aproximar">+</button>
+              </div>
+              <button class="mini-btn" id="c-speed" type="button">1×</button>
+            </div>
+          </div>
+          <div class="chart-body"><div id="c-chart"></div></div>
+          <div class="pattern-reveal" id="c-pattern" hidden><span class="dot"></span><span id="c-pattern-text"></span></div>
+        </div>
+
+        <div class="controls" id="c-controls">
+          <button id="c-buy" class="ctrl buy" type="button">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5L10.5 9H1.5L6 1.5Z" fill="currentColor"/></svg>
+            Comprar <kbd>C</kbd>
+          </button>
+          <button id="c-sell" class="ctrl sell" type="button">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 10.5L1.5 3H10.5L6 10.5Z" fill="currentColor"/></svg>
+            Vender <kbd>V</kbd>
+          </button>
+          <button id="c-skip" class="ctrl wait" type="button">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2.5" y="1.5" width="2.4" height="9" rx="0.6" fill="currentColor"/><rect x="7.1" y="1.5" width="2.4" height="9" rx="0.6" fill="currentColor"/></svg>
+            Passar <kbd>E</kbd>
+          </button>
+        </div>
+        <p class="hint">Você entra, o stop e o alvo são colocados na estrutura e o gráfico anda até o fim da operação. O placar é em R: cada perda custa 1R, cada ganho vale o R do alvo.</p>
+        <div id="c-fb"></div>
+        <div id="c-next"></div>
+      </div>
+
+      <aside class="rail">
+        <div class="card card-pad">
+          <p class="rail-title">Placar do desafio</p>
+          <div class="stat-grid">
+            <div class="stat">
+              <span class="stat-label">R acumulado</span>
+              <span class="stat-value" id="c-r">0,0R</span>
+              <span class="stat-sub" id="c-trades">0 operações</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Acerto</span>
+              <span class="stat-value gold" id="c-win">—</span>
+              <span class="stat-sub" id="c-skipped">0 passadas</span>
+            </div>
+          </div>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">Operação atual</p>
+          <div class="meta-list" id="c-pos-meta">
+            <p class="empty-log">Nenhuma posição aberta. Leia o gráfico e decida: comprar, vender ou passar.</p>
+          </div>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">Últimas operações</p>
+          <div class="trade-log" id="c-log"><p class="empty-log">O histórico aparece aqui conforme você opera.</p></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ REPLAY ============ -->
+  <section id="view-replay" class="view" hidden>
+    <div class="work">
+      <div>
+        <div class="card">
+          <div class="chart-head">
+            <span class="sym">SIMUL</span>
+            <span class="chip tf" id="r-chip-tf">M5</span>
+            <span class="chip" id="r-chip-bar">0 / 0</span>
+            <span class="live-flag" id="r-flag" hidden><span class="live-dot"></span>Rodando</span>
+            <div class="head-right">
+              <div class="zoom-ctl">
+                <button type="button" id="r-zoom-out" aria-label="Afastar">−</button>
+                <span id="r-zoom-lbl">46</span>
+                <button type="button" id="r-zoom-in" aria-label="Aproximar">+</button>
+              </div>
+              <button class="mini-btn" id="r-play" type="button">▶ Rodar</button>
+              <button class="mini-btn" id="r-step" type="button">⏭ 1 candle</button>
+              <button class="mini-btn" id="r-speed" type="button">1×</button>
+              <button class="mini-btn" id="r-new" type="button">Novo mercado</button>
+            </div>
+          </div>
+          <div class="chart-body"><div id="r-chart"></div></div>
+        </div>
+
+        <div class="controls" id="r-controls">
+          <button id="r-buy" class="ctrl buy" type="button">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5L10.5 9H1.5L6 1.5Z" fill="currentColor"/></svg>
+            Comprar <kbd>C</kbd>
+          </button>
+          <button id="r-sell" class="ctrl sell" type="button">
+            <svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 10.5L1.5 3H10.5L6 10.5Z" fill="currentColor"/></svg>
+            Vender <kbd>V</kbd>
+          </button>
+          <button id="r-close" class="ctrl wait" type="button" disabled>
+            <svg viewBox="0 0 12 12" aria-hidden="true"><rect x="1.6" y="5" width="8.8" height="2.2" rx="0.6" fill="currentColor"/></svg>
+            Zerar posição <kbd>F</kbd>
+          </button>
+        </div>
+        <p class="hint">Espaço roda e pausa · seta direita avança um candle · C compra · V vende · F zera a posição. O stop e o alvo entram sozinhos na estrutura — feche na mão quando quiser.</p>
+        <div id="r-fb"></div>
+      </div>
+
+      <aside class="rail">
+        <div class="card card-pad">
+          <p class="rail-title">Sessão de replay</p>
+          <div class="stat-grid">
+            <div class="stat">
+              <span class="stat-label">R acumulado</span>
+              <span class="stat-value" id="r-total">0,0R</span>
+              <span class="stat-sub" id="r-count">0 operações</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Acerto</span>
+              <span class="stat-value gold" id="r-win">—</span>
+              <span class="stat-sub" id="r-open">sem posição</span>
+            </div>
+          </div>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">Posição</p>
+          <div class="meta-list" id="r-pos-meta"><p class="empty-log">Sem posição aberta.</p></div>
+        </div>
+        <div class="card card-pad">
+          <p class="rail-title">Operações do replay</p>
+          <div class="trade-log" id="r-log"><p class="empty-log">Compre ou venda em qualquer ponto do replay para começar o histórico.</p></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ AO VIVO (TRADINGVIEW) ============ -->
+  <section id="view-live" class="view" hidden>
+    <h2 class="view-title">Gráficos ao vivo</h2>
+    <p class="intro">Preço real do TradingView, com as ferramentas de desenho liberadas para a sua análise. O número da aba é a quantidade de gráficos na tela ao mesmo tempo.</p>
+    <div class="tabs" id="live-tabs">
+      <button type="button" class="tab sel" data-n="1">Gráfico 1</button>
+      <button type="button" class="tab" data-n="2">Gráfico 2</button>
+      <button type="button" class="tab" data-n="3">Gráfico 3</button>
+    </div>
+    <div class="live-cfg" id="live-cfg"></div>
+    <datalist id="sym-list">
+      <option value="OANDA:XAUUSD">Ouro · XAUUSD</option>
+      <option value="BINANCE:BTCUSDT">Bitcoin · BTCUSDT</option>
+      <option value="BITSTAMP:BTCUSD">Bitcoin · BTCUSD</option>
+      <option value="OANDA:EURUSD">Euro · EURUSD</option>
+      <option value="OANDA:GBPUSD">Libra · GBPUSD</option>
+      <option value="OANDA:USDJPY">Iene · USDJPY</option>
+      <option value="OANDA:NAS100USD">Nasdaq · NAS100</option>
+      <option value="OANDA:SPX500USD">S&amp;P 500</option>
+      <option value="BMFBOVESPA:WIN1!">Mini índice · WIN</option>
+      <option value="BMFBOVESPA:WDO1!">Mini dólar · WDO</option>
+      <option value="BMFBOVESPA:IBOV">Ibovespa</option>
+    </datalist>
+    <div class="live-grid n1" id="live-grid"></div>
+    <p class="hint" id="live-note">Digite qualquer código do TradingView no campo (com ou sem a corretora, por exemplo <code>OANDA:XAUUSD</code> ou só <code>XAUUSD</code>) e clique em Aplicar. Dá para trocar o ativo e o tempo gráfico dentro do próprio gráfico também.</p>
+  </section>
+
+  <!-- ============ AJUSTES ============ -->
+  <section id="view-setup" class="view" hidden>
+    <h2 class="view-title">Configurar treino</h2>
+    <p class="intro">Estas opções valem para o treino, o desafio e o replay. Trocar de configuração não apaga as estatísticas da sessão.</p>
+    <div class="card card-pad">
+      <div class="cfg-group">
+        <p class="cfg-label">Estilo</p>
+        <p class="cfg-desc">Day trade trabalha em M1 a H1, com alvo de 2R e operações curtas. Swing trade usa H4, diário e semanal, alvo de 3R e operações que levam dezenas de candles para se resolver.</p>
+        <div class="opt-row" id="style-row"></div>
+      </div>
+      <div class="cfg-group">
+        <p class="cfg-label">Modo de treino</p>
+        <p class="cfg-desc">Cada modo sorteia só os setups daquela família — para treinar uma leitura específica até virar automático.</p>
+        <div class="mode-grid" id="mode-grid"></div>
+      </div>
+      <div class="cfg-group">
+        <p class="cfg-label">Timeframe</p>
+        <p class="cfg-desc">Muda a amplitude de cada candle e o relógio do gráfico. Quanto maior o tempo gráfico, mais limpo o movimento.</p>
+        <div class="opt-row" id="tf-row"></div>
+      </div>
+      <div class="cfg-group">
+        <p class="cfg-label">Nível</p>
+        <p class="cfg-desc">O nível controla o ruído dos candles, o tamanho do candle de confirmação e a frequência das armadilhas (fakeouts, reações fracas).</p>
+        <div class="opt-row" id="level-row"></div>
+      </div>
+      <div class="cfg-group">
+        <p class="cfg-label">Gráfico no treino</p>
+        <p class="cfg-desc">No modo estático o gráfico já está parado no momento da decisão. No tempo real os candles vão se formando e você precisa clicar na hora certa — não clicar é o mesmo que esperar.</p>
+        <div class="opt-row" id="chart-row"></div>
+      </div>
+      <div class="cfg-group" id="speed-group" hidden>
+        <p class="cfg-label">Velocidade</p>
+        <div class="opt-row" id="speed-row"></div>
+      </div>
+      <button class="next-btn" id="btn-start" type="button">Começar treino</button>
+      <button class="ghost-btn" id="btn-start-chal" type="button">Ir para o desafio</button>
+    </div>
+  </section>
+
+  <!-- ============ DICAS ============ -->
+  <section id="view-tips" class="view" hidden>
+    <h2 class="view-title">Como operar cada setup</h2>
+    <p class="intro">Um resumo das regras que o simulador cobra de você. A ordem importa: contexto primeiro, gatilho por último. Se qualquer passo falhar, a resposta certa é esperar — e esperar é uma decisão, não a ausência de uma.</p>
+    <div class="tips-grid" id="tips-grid"></div>
+  </section>
+
+  <!-- ============ RELATÓRIO ============ -->
+  <section id="view-report" class="view" hidden>
+    <h2 class="view-title">Relatório da sessão</h2>
+    <p class="intro">Os números somam todas as rodadas desta sessão, em todos os modos e níveis.</p>
+    <div id="report-body"></div>
+  </section>
+
+  <p class="disclaimer">Gráficos gerados por simulação, com dados sintéticos. Material de treino de leitura de preço — não é recomendação de investimento.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ===================== parâmetros ===================== */
+
+  var TF = {
+    M1:  { label: 'M1',  min: 1,     vol: 0.16, day: true },
+    M5:  { label: 'M5',  min: 5,     vol: 0.36, day: true },
+    M15: { label: 'M15', min: 15,    vol: 0.68, day: true },
+    H1:  { label: 'H1',  min: 60,    vol: 1.30, day: true },
+    H4:  { label: 'H4',  min: 240,   vol: 2.40, day: false },
+    D1:  { label: 'Diário',  min: 1440,  vol: 4.20, day: false },
+    W1:  { label: 'Semanal', min: 10080, vol: 8.00, day: false }
+  };
+
+  var LV = {
+    facil:   { label: 'Fácil',   cls: 'easy',   noise: 0.42, wick: 0.40, trap: 0.25, conf: 2.0 },
+    medio:   { label: 'Médio',   cls: 'medium', noise: 0.72, wick: 0.68, trap: 0.45, conf: 1.5 },
+    dificil: { label: 'Difícil', cls: 'hard',   noise: 1.02, wick: 1.00, trap: 0.62, conf: 1.1 }
+  };
+
+  var STYLES = {
+    day:   { label: 'Day trade', tfs: ['M1', 'M5', 'M15', 'H1'], rr: 2, defaultTf: 'M5' },
+    swing: { label: 'Swing trade', tfs: ['H4', 'D1', 'W1'], rr: 3, defaultTf: 'D1' }
+  };
+
+  var MODES = {
+    misto:        { label: 'Misto', desc: 'Todos os setups sorteados juntos, como no mercado real.' },
+    consolidacao: { label: 'Saindo de consolidação', desc: 'Ranges apertados, rompimentos e armadilhas de fakeout.' },
+    alta:         { label: 'Mercado subindo', desc: 'Tendência de alta: recuos, impulsos e exaustão no topo.' },
+    baixa:        { label: 'Mercado descendo', desc: 'Tendência de baixa: repiques, impulsos e exaustão no fundo.' },
+    pullback:     { label: 'Treino de pullback', desc: 'Só recuos em tendência — o clássico, até virar automático.' },
+    rompimento:   { label: 'Treino de rompimento', desc: 'Rompimentos válidos contra rompimentos falsos.' },
+    niveis:       { label: 'Suporte e resistência', desc: 'Reação em nível: quando o toque vale entrada e quando não vale.' }
+  };
+
+  var MODE_HINTS = {
+    misto: ['Leia nesta ordem: contexto, localização, gatilho.', 'Só entre depois que o candle de confirmação fechar.', 'Na dúvida, esperar é resposta certa mais vezes do que parece.'],
+    consolidacao: ['Range bom é apertado e com vários candles.', 'Rompimento válido tem corpo grande fechando fora da borda.', 'Pavio que sai e volta pra dentro é armadilha: deixe passar.'],
+    alta: ['Tendência de alta: topos e fundos subindo.', 'Compre o recuo, nunca o impulso já esticado.', 'Resistência acima é alvo, não ponto de compra.'],
+    baixa: ['Tendência de baixa: topos e fundos descendo.', 'Venda o repique, nunca a mínima já esticada.', 'Suporte abaixo é alvo, não ponto de venda.'],
+    pullback: ['O recuo precisa ser mais lento que o impulso.', 'Gatilho: candle que fecha além da máxima (ou mínima) do último candle da correção.', 'Correção ainda andando contra você = espere.'],
+    rompimento: ['Espere o fechamento fora do range, não o furo.', 'Corpo pequeno rompendo = desconfie.', 'Voltou pra dentro no mesmo candle? Fakeout.'],
+    niveis: ['Nível é zona, não linha.', 'Tocar não basta: precisa do candle de reação.', 'Muitos toques em pouco tempo enfraquecem o nível.']
+  };
+
+  var CFG = { style: 'day', level: 'medio', tf: 'M5', mode: 'misto', live: false, speed: 1, zoom: 46 };
+
+  var STATS = {
+    rounds: 0, score: 0, streak: 0, best: 0,
+    cats: { buy: { c: 0, t: 0 }, sell: { c: 0, t: 0 }, wait: { c: 0, t: 0 } },
+    fams: {}
+  };
+  var FAMS = {
+    pullback: 'Pullback', rompimento: 'Rompimento', nivel: 'Suporte / resistência',
+    exaustao: 'Exaustão', impulso: 'Impulso (perseguir)', range: 'Range / indefinição'
+  };
+  Object.keys(FAMS).forEach(function (k) { STATS.fams[k] = { c: 0, t: 0 }; });
+
+  var CHAL = { trades: 0, wins: 0, totalR: 0, skipped: 0, goodSkips: 0, log: [] };
+  var RSTATS = { trades: 0, wins: 0, totalR: 0, log: [] };
+
+  /* ===================== utilidades ===================== */
+
+  function el(id) { return document.getElementById(id); }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function gauss() { var s = 0; for (var i = 0; i < 6; i++) s += Math.random(); return (s - 3) / 1.5; }
+  function isNarrow() { return window.innerWidth < 760; }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function fmtR(r) { return (r >= 0 ? '+' : '') + r.toFixed(1).replace('.', ',') + 'R'; }
+  function rr() { return STYLES[CFG.style].rr; }
+
+  /* ===================== gerador ===================== */
+
+  var OUT_K = 1;
+
+  var TF_OVERRIDE = null;
+  function curTf() { return TF_OVERRIDE || CFG.tf; }
+
+  function params() {
+    var lv = LV[CFG.level];
+    return { vol: TF[curTf()].vol, noise: lv.noise, wick: lv.wick, conf: lv.conf, trap: lv.trap };
+  }
+  function ob(n) { return Math.max(2, Math.round(n * OUT_K)); }
+
+  function mkCandle(o, c, vol, wick) {
+    var hi = Math.max(o, c) + Math.abs(gauss()) * vol * wick + vol * 0.05;
+    var lo = Math.min(o, c) - Math.abs(gauss()) * vol * wick - vol * 0.05;
+    return { o: o, c: c, h: hi, l: lo };
+  }
+  function step(bars, st, drift, p, volMul) {
+    var vol = p.vol * (volMul == null ? 1 : volMul);
+    var o = st.price, c = o + drift * vol + gauss() * vol * p.noise;
+    bars.push(mkCandle(o, c, vol, p.wick)); st.price = c;
+  }
+  function pushContext(bars, st, n, p) {
+    var drift = rnd(-0.22, 0.22);
+    for (var i = 0; i < n; i++) {
+      if (Math.random() < 0.14) drift = rnd(-0.32, 0.32);
+      step(bars, st, drift, p, 0.95);
+    }
+  }
+  function pushTrend(bars, st, n, dir, p, strength) {
+    var s = strength == null ? 0.62 : strength;
+    for (var i = 0; i < n; i++) step(bars, st, dir * s, p, 1);
+  }
+  function pushToward(bars, st, target, n, p) {
+    for (var i = 0; i < n; i++) {
+      var mv = (target - st.price) / (n - i);
+      var o = st.price, c = o + mv + gauss() * p.vol * p.noise * 0.45;
+      bars.push(mkCandle(o, c, p.vol, p.wick)); st.price = c;
+    }
+  }
+  function pushRange(bars, st, n, center, halfW, p) {
+    for (var i = 0; i < n; i++) {
+      var o = st.price;
+      var target = center + rnd(-halfW * 0.8, halfW * 0.8);
+      var c = o + (target - o) * rnd(0.5, 0.95);
+      var cd = mkCandle(o, c, p.vol * 0.72, p.wick * 0.85);
+      cd.h = Math.min(cd.h, center + halfW); cd.l = Math.max(cd.l, center - halfW);
+      cd.h = Math.max(cd.h, Math.max(cd.o, cd.c)); cd.l = Math.min(cd.l, Math.min(cd.o, cd.c));
+      bars.push(cd); st.price = c;
+    }
+  }
+  function pushBar(bars, st, delta, p, wickMul) {
+    var o = st.price, c = o + delta;
+    var b = mkCandle(o, c, p.vol, wickMul == null ? p.wick * 0.7 : wickMul);
+    bars.push(b); st.price = c; return b;
+  }
+  function lastHigh(bars, n) { var hi = -Infinity; for (var i = Math.max(0, bars.length - n); i < bars.length; i++) hi = Math.max(hi, bars[i].h); return hi; }
+  function lastLow(bars, n) { var lo = Infinity; for (var i = Math.max(0, bars.length - n); i < bars.length; i++) lo = Math.min(lo, bars[i].l); return lo; }
+
+  function padFor(setupLen) {
+    var runway = CFG.live ? Math.floor(rnd(7, 15)) : 0;
+    return clamp(Math.max(CFG.zoom, 46) + 14 - setupLen + runway, 12, 150);
+  }
+
+  /* ===================== setups ===================== */
+
+  var SETUPS = {};
+
+  SETUPS.pullbackEntrada = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var legs = Math.floor(rnd(7, 11)), pb = Math.floor(rnd(3, 6));
+    pushContext(bars, st, padFor(legs + pb + 1), p);
+    pushTrend(bars, st, legs, dir, p, rnd(0.55, 0.8));
+    pushTrend(bars, st, pb, -dir, p, rnd(0.42, 0.6));
+    var edge = dir > 0 ? lastHigh(bars, pb) : lastLow(bars, pb);
+    pushBar(bars, st, (edge + dir * p.vol * rnd(0.35, 0.9)) - st.price, p, p.wick * 0.5);
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(11), dir, p, rnd(0.5, 0.8));
+    return {
+      bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'pullback',
+      pattern: dir > 0 ? 'Recuo em tendência de alta — retomada confirmada' : 'Repique em tendência de baixa — retomada confirmada',
+      explain: dir > 0
+        ? 'A tendência é de alta, o recuo foi mais lento que o impulso e o candle atual fechou acima da máxima da correção. É o gatilho do pullback.'
+        : 'A tendência é de baixa, o repique foi mais lento que a queda e o candle atual fechou abaixo da mínima da correção. É o gatilho do pullback vendedor.',
+      tip: dir > 0
+        ? 'Stop abaixo do fundo do recuo, alvo em pelo menos 2× o risco. Se o candle de gatilho for enorme, o stop fica longe demais — melhor deixar passar.'
+        : 'Stop acima do topo do repique, alvo em pelo menos 2× o risco. Gatilho gigante deixa o stop longe demais: deixe passar.'
+    };
+  };
+
+  SETUPS.pullbackAndando = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var legs = Math.floor(rnd(7, 11)), pb = Math.floor(rnd(2, 4));
+    pushContext(bars, st, padFor(legs + pb + 1), p);
+    pushTrend(bars, st, legs, dir, p, rnd(0.55, 0.8));
+    pushTrend(bars, st, pb, -dir, p, rnd(0.45, 0.6));
+    pushBar(bars, st, -dir * p.vol * rnd(0.15, 0.45), p, p.wick);
+    var di = bars.length - 1;
+    pushTrend(bars, st, 2, -dir, p, 0.35);
+    var edge2 = dir > 0 ? lastHigh(bars, 3) : lastLow(bars, 3);
+    pushBar(bars, st, (edge2 + dir * p.vol * 0.6) - st.price, p, p.wick * 0.5);
+    pushTrend(bars, st, ob(8), dir, p, 0.68);
+    return {
+      bars: bars, decisionIndex: di, correct: 'wait', family: 'pullback',
+      pattern: 'Correção ainda em andamento — sem gatilho',
+      explain: 'A tendência está a favor, mas o candle atual ainda anda contra você e não superou a correção. Sem o candle de retomada fechado, não existe entrada — existe palpite.',
+      tip: 'Repare no desfecho: o gatilho de verdade veio alguns candles depois, com preço melhor e stop menor. Esperar não custou a entrada, barateou ela.'
+    };
+  };
+
+  SETUPS.rompimento = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var rangeLen = Math.floor(rnd(10, 16));
+    pushContext(bars, st, padFor(rangeLen + 1), p);
+    var center = st.price, halfW = p.vol * rnd(1.5, 2.4);
+    pushRange(bars, st, rangeLen, center, halfW, p);
+    var edge = center + dir * halfW;
+    pushBar(bars, st, (edge + dir * p.vol * rnd(0.8, 1.5) * (p.conf / 1.5)) - st.price, p, p.wick * 0.45);
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(11), dir, p, rnd(0.55, 0.85));
+    return {
+      bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'rompimento',
+      pattern: dir > 0 ? 'Rompimento de máxima confirmado' : 'Rompimento de mínima confirmado',
+      explain: 'O preço passou vários candles preso num range apertado e o candle atual fechou fora da borda com corpo grande. Rompimento com fechamento é o gatilho.',
+      tip: 'Stop no meio do range (ou logo atrás da borda rompida). Se preferir risco menor, espere o reteste da borda — ele acontece na maioria das vezes.',
+      support: center - halfW, resistance: center + halfW,
+      supLabel: 'Base do range', resLabel: 'Topo do range'
+    };
+  };
+
+  SETUPS.rompimentoFalso = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var rangeLen = Math.floor(rnd(10, 16));
+    pushContext(bars, st, padFor(rangeLen + 1), p);
+    var center = st.price, halfW = p.vol * rnd(1.5, 2.4);
+    pushRange(bars, st, rangeLen, center, halfW, p);
+    var o = st.price, c = center - dir * halfW * rnd(0.05, 0.35);
+    var pierce = center + dir * (halfW + p.vol * rnd(0.7, 1.4));
+    var b = { o: o, c: c, h: dir > 0 ? pierce : Math.max(o, c) + p.vol * 0.2, l: dir > 0 ? Math.min(o, c) - p.vol * 0.2 : pierce };
+    bars.push(b); st.price = c;
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(4), -dir, p, 0.55);
+    pushTrend(bars, st, ob(7), -dir, p, 0.75);
+    return {
+      bars: bars, decisionIndex: di, correct: 'wait', family: 'rompimento',
+      pattern: 'Rompimento falso (fakeout)',
+      explain: 'O candle atual furou a borda do range no pavio, mas fechou de volta lá dentro. Furo sem fechamento não é rompimento — é armadilha para quem entra no calor do movimento.',
+      tip: 'Regra simples: rompimento só existe com fechamento fora. E repare no desfecho — depois do fakeout o preço costuma ir com força para o lado contrário.',
+      support: center - halfW, resistance: center + halfW,
+      supLabel: 'Base do range', resLabel: 'Topo do range'
+    };
+  };
+
+  SETUPS.rangeIndefinido = function (p) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var rangeLen = Math.floor(rnd(14, 20));
+    pushContext(bars, st, padFor(rangeLen + 1), p);
+    var center = st.price, halfW = p.vol * rnd(1.8, 2.8);
+    pushRange(bars, st, rangeLen + 1, center, halfW, p);
+    var di = bars.length - 1;
+    pushRange(bars, st, ob(11), center, halfW, p);
+    return {
+      bars: bars, decisionIndex: di, correct: 'wait', family: 'range',
+      pattern: 'Mercado em range — sem direção',
+      explain: 'Candles sobrepostos, sem topos e fundos progredindo, médias coladas. Não existe tendência para seguir nem nível para reagir: qualquer entrada aqui é aposta.',
+      tip: 'Range estreito e ruidoso é onde a conta derrete em taxas e stops curtos. Marque as bordas e volte quando uma delas romper com fechamento.',
+      support: center - halfW, resistance: center + halfW,
+      supLabel: 'Base do range', resLabel: 'Topo do range'
+    };
+  };
+
+  SETUPS.impulsoPerseguindo = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var legs = Math.floor(rnd(9, 13));
+    pushContext(bars, st, padFor(legs + 1), p);
+    pushTrend(bars, st, legs, dir, p, rnd(0.75, 1.05));
+    pushBar(bars, st, dir * p.vol * rnd(1.1, 1.8), p, p.wick * 0.6);
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(3), -dir, p, 0.8);
+    pushTrend(bars, st, ob(8), -dir, p, 0.4);
+    return {
+      bars: bars, decisionIndex: di, correct: 'wait', family: 'impulso',
+      pattern: dir > 0 ? 'Impulso de alta esticado — sem pausa' : 'Impulso de baixa esticado — sem pausa',
+      explain: 'O movimento já andou muito e ainda não fez nenhuma correção. Entrar agora é perseguir o preço: o stop fica longe, o alvo fica curto e a relação risco/retorno vira negativa.',
+      tip: 'Quando bater o "está indo sem mim", é exatamente a hora de não entrar. Marque o nível, espere o primeiro recuo e opere o pullback.'
+    };
+  };
+
+  SETUPS.exaustao = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var legs = Math.floor(rnd(9, 13));
+    pushContext(bars, st, padFor(legs + 1), p);
+    pushTrend(bars, st, legs, dir, p, rnd(0.8, 1.05));
+    var prev = bars[bars.length - 1], o = st.price;
+    var c = dir > 0
+      ? Math.min(prev.o, prev.c) - p.vol * rnd(0.4, 0.9) * (p.conf / 1.5)
+      : Math.max(prev.o, prev.c) + p.vol * rnd(0.4, 0.9) * (p.conf / 1.5);
+    var b = mkCandle(o, c, p.vol, p.wick * 0.6);
+    if (dir > 0) b.h = Math.max(b.h, prev.h + p.vol * 0.1); else b.l = Math.min(b.l, prev.l - p.vol * 0.1);
+    bars.push(b); st.price = c;
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(11), -dir, p, rnd(0.55, 0.85));
+    return {
+      bars: bars, decisionIndex: di, correct: dir > 0 ? 'sell' : 'buy', family: 'exaustao',
+      pattern: dir > 0 ? 'Exaustão no topo — candle de reversão' : 'Exaustão no fundo — candle de reversão',
+      explain: dir > 0
+        ? 'Depois de um movimento longo sem correção, o candle atual abriu na máxima e fechou engolindo o corpo anterior. Compradores perderam o controle: reversão confirmada.'
+        : 'Depois de uma queda longa sem correção, o candle atual abriu na mínima e fechou engolindo o corpo anterior. Vendedores perderam o controle: reversão confirmada.',
+      tip: 'Operar contra a tendência só com candle de reversão FECHADO e movimento esticado. Stop além da máxima (ou mínima) do candle de reversão, e realize parcial rápido.'
+    };
+  };
+
+  SETUPS.exaustaoSemConfirmacao = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var legs = Math.floor(rnd(9, 13));
+    pushContext(bars, st, padFor(legs + 1), p);
+    pushTrend(bars, st, legs, dir, p, rnd(0.8, 1.05));
+    var o = st.price, c = o + dir * p.vol * rnd(0.5, 0.9);
+    var spike = c + dir * p.vol * rnd(1.6, 2.6);
+    var b = { o: o, c: c, h: dir > 0 ? spike : Math.max(o, c) + p.vol * 0.25, l: dir > 0 ? Math.min(o, c) - p.vol * 0.25 : spike };
+    bars.push(b); st.price = c;
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(3), dir, p, 0.5);
+    pushTrend(bars, st, ob(8), -dir, p, 0.6);
+    return {
+      bars: bars, decisionIndex: di, correct: 'wait', family: 'exaustao',
+      pattern: 'Pavio de rejeição sem candle de reversão',
+      explain: 'O pavio mostra rejeição, mas o corpo do candle ainda fechou a favor do movimento. Pavio não é reversão: sem um candle fechando contra a tendência, você estaria adivinhando o topo.',
+      tip: 'Topo e fundo só são conhecidos depois. Espere o candle de reversão fechar — você perde os primeiros centavos e evita a maioria das facadas.'
+    };
+  };
+
+  SETUPS.nivelReacao = function (p, dir) {
+    var st = { price: rnd(90, 130) }, bars = [];
+    var approach = Math.floor(rnd(5, 8));
+    pushContext(bars, st, padFor(approach + 2), p);
+    var level = dir > 0 ? lastLow(bars, 16) : lastHigh(bars, 16);
+    pushToward(bars, st, level + dir * p.vol * rnd(1.0, 1.8), approach, p);
+    var o = st.price, c = level + dir * p.vol * rnd(1.0, 1.7) * (p.conf / 1.5);
+    var touch = level - dir * p.vol * rnd(0.02, 0.18);
+    var b = {
+      o: o, c: c,
+      l: dir > 0 ? touch : Math.min(o, c) - p.vol * 0.2,
+      h: dir > 0 ? Math.max(o, c) + p.vol * 0.2 : touch
+    };
+    bars.push(b); st.price = c;
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(11), dir, p, rnd(0.55, 0.85));
+    return {
+      bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'nivel',
+      pattern: dir > 0 ? 'Reação confirmada no suporte' : 'Rejeição confirmada na resistência',
+      explain: dir > 0
+        ? 'O preço chegou no suporte, deixou um pavio abaixo dele e fechou com corpo forte para cima. Tocar não basta — o que vale é o candle de reação, e ele veio.'
+        : 'O preço chegou na resistência, deixou um pavio acima dela e fechou com corpo forte para baixo. Tocar não basta — o candle de rejeição é o gatilho, e ele veio.',
+      tip: 'Stop do outro lado do nível (alguns pontos além do pavio), nunca exatamente na linha. Alvo no primeiro nível oposto relevante.',
+      support: dir > 0 ? level : null, resistance: dir > 0 ? null : level
+    };
+  };
+
+  SETUPS.nivelLonge = function (p, dir) {
+    var st = { price: rnd(90, 130) }, bars = [];
+    var approach = Math.floor(rnd(5, 8));
+    pushContext(bars, st, padFor(approach + 2), p);
+    var level = dir > 0 ? lastLow(bars, 16) : lastHigh(bars, 16);
+    pushToward(bars, st, level + dir * p.vol * rnd(2.6, 4.0), approach, p);
+    pushBar(bars, st, -dir * p.vol * rnd(0.3, 0.7), p, p.wick);
+    var di = bars.length - 1;
+    pushToward(bars, st, level + dir * p.vol * 0.05, ob(3), p);
+    pushTrend(bars, st, ob(8), dir, p, 0.7);
+    return {
+      bars: bars, decisionIndex: di, correct: 'wait', family: 'nivel',
+      pattern: 'Preço ainda longe do nível',
+      explain: 'O nível está marcado, mas o preço ainda não chegou nele. Entrar no meio do caminho é pagar mais caro por um trade que você poderia ter no lugar certo.',
+      tip: 'Coloque um alerta no nível em vez de ficar olhando o gráfico. Você entra quando o preço chega E reage — as duas coisas.',
+      support: dir > 0 ? level : null, resistance: dir > 0 ? null : level
+    };
+  };
+
+  SETUPS.nivelReacaoFraca = function (p, dir) {
+    var st = { price: rnd(90, 130) }, bars = [];
+    var approach = Math.floor(rnd(5, 8));
+    pushContext(bars, st, padFor(approach + 3), p);
+    var level = dir > 0 ? lastLow(bars, 16) : lastHigh(bars, 16);
+    pushToward(bars, st, level + dir * p.vol * 0.5, approach, p);
+    var o = st.price, c = level + dir * p.vol * rnd(0.15, 0.45);
+    var b = mkCandle(o, c, p.vol * 0.6, p.wick * 0.8);
+    if (dir > 0) b.l = Math.min(b.l, level - p.vol * 0.1); else b.h = Math.max(b.h, level + p.vol * 0.1);
+    bars.push(b); st.price = c;
+    var di = bars.length - 1;
+    pushToward(bars, st, level - dir * p.vol * 0.8, ob(3), p);
+    pushTrend(bars, st, ob(8), -dir, p, 0.6);
+    return {
+      bars: bars, decisionIndex: di, correct: 'wait', family: 'nivel',
+      pattern: 'Toque no nível com reação fraca',
+      explain: 'O preço encostou no nível, mas o candle é pequeno e indeciso — não há força nenhuma confirmando a reação. Nível que segura de verdade produz candle de corpo grande.',
+      tip: 'Reação fraca costuma virar rompimento do nível. Espere corpo grande na direção da reação ou fique de fora: aqui o desfecho foi a perda do nível.',
+      support: dir > 0 ? level : null, resistance: dir > 0 ? null : level
+    };
+  };
+
+  function poolFor(mode) {
+    switch (mode) {
+      case 'consolidacao':
+      case 'rompimento':
+        return { entradas: [['rompimento', 1], ['rompimento', -1]],
+                 esperas: [['rompimentoFalso', 1], ['rompimentoFalso', -1], ['rangeIndefinido', 1]] };
+      case 'alta':
+        return { entradas: [['pullbackEntrada', 1], ['rompimento', 1], ['nivelReacao', 1], ['exaustao', 1]],
+                 esperas: [['pullbackAndando', 1], ['impulsoPerseguindo', 1], ['exaustaoSemConfirmacao', 1], ['nivelLonge', -1]] };
+      case 'baixa':
+        return { entradas: [['pullbackEntrada', -1], ['rompimento', -1], ['nivelReacao', -1], ['exaustao', -1]],
+                 esperas: [['pullbackAndando', -1], ['impulsoPerseguindo', -1], ['exaustaoSemConfirmacao', -1], ['nivelLonge', 1]] };
+      case 'pullback':
+        return { entradas: [['pullbackEntrada', 1], ['pullbackEntrada', -1]],
+                 esperas: [['pullbackAndando', 1], ['pullbackAndando', -1], ['impulsoPerseguindo', 1], ['impulsoPerseguindo', -1]] };
+      case 'niveis':
+        return { entradas: [['nivelReacao', 1], ['nivelReacao', -1]],
+                 esperas: [['nivelLonge', 1], ['nivelLonge', -1], ['nivelReacaoFraca', 1], ['nivelReacaoFraca', -1]] };
+      default:
+        return {
+          entradas: [['pullbackEntrada', 1], ['pullbackEntrada', -1], ['rompimento', 1], ['rompimento', -1],
+                     ['nivelReacao', 1], ['nivelReacao', -1], ['exaustao', 1], ['exaustao', -1]],
+          esperas: [['pullbackAndando', 1], ['pullbackAndando', -1], ['rompimentoFalso', 1], ['rompimentoFalso', -1],
+                    ['impulsoPerseguindo', 1], ['impulsoPerseguindo', -1], ['rangeIndefinido', 1],
+                    ['exaustaoSemConfirmacao', 1], ['nivelLonge', 1], ['nivelLonge', -1], ['nivelReacaoFraca', 1]]
+        };
+    }
+  }
+
+  var lastKey = '';
+  function buildScenario() {
+    var p = params(), pool = poolFor(CFG.mode), scn = null;
+    for (var tries = 0; tries < 6; tries++) {
+      var trap = Math.random() < p.trap;
+      var choice = pick(trap ? pool.esperas : pool.entradas);
+      var key = choice[0] + ':' + choice[1];
+      if (key === lastKey && tries < 3) continue;
+      scn = SETUPS[choice[0]](p, choice[1]); lastKey = key; break;
+    }
+    if (!scn) scn = SETUPS.pullbackEntrada(p, 1);
+    if (scn.support === undefined) scn.support = null;
+    if (scn.resistance === undefined) scn.resistance = null;
+    scn.clock0 = Math.floor(rnd(9, 15)) * 60;
+    return scn;
+  }
+
+  function generateMarket(n) {
+    var p = params(), base = rnd(90, 130), st = { price: base }, bars = [];
+    while (bars.length < n) {
+      var r = Math.random();
+      var dir = Math.random() < 0.5 ? 1 : -1;
+      if (Math.abs(st.price - base) > 12 * p.vol) dir = st.price > base ? -1 : 1;
+      if (r < 0.38) pushTrend(bars, st, Math.floor(rnd(8, 20)), dir, p, rnd(0.14, 0.4));
+      else if (r < 0.78) pushRange(bars, st, Math.floor(rnd(10, 26)), st.price, p.vol * rnd(1.4, 3), p);
+      else pushTrend(bars, st, Math.floor(rnd(4, 9)), dir, p, rnd(0.5, 0.85));
+    }
+    return bars.slice(0, n);
+  }
+
+  /* ===================== plano de trade ===================== */
+
+  function tradePlan(bars, idx, side) {
+    var p = params();
+    var entry = bars[idx].c, lookback = 6, i, ext;
+    if (side === 'buy') {
+      ext = Infinity;
+      for (i = Math.max(0, idx - lookback); i <= idx; i++) ext = Math.min(ext, bars[i].l);
+      var stopB = ext - p.vol * 0.25;
+      var riskB = Math.max(entry - stopB, p.vol * 0.5);
+      return { side: side, entry: entry, stop: entry - riskB, target: entry + riskB * rr(), risk: riskB };
+    }
+    ext = -Infinity;
+    for (i = Math.max(0, idx - lookback); i <= idx; i++) ext = Math.max(ext, bars[i].h);
+    var stopS = ext + p.vol * 0.25;
+    var riskS = Math.max(stopS - entry, p.vol * 0.5);
+    return { side: side, entry: entry, stop: entry + riskS, target: entry - riskS * rr(), risk: riskS };
+  }
+
+  function hitCheck(pos, bar) {
+    if (pos.side === 'buy') {
+      if (bar.l <= pos.stop) return { price: pos.stop, why: 'stop' };
+      if (bar.h >= pos.target) return { price: pos.target, why: 'alvo' };
+    } else {
+      if (bar.h >= pos.stop) return { price: pos.stop, why: 'stop' };
+      if (bar.l <= pos.target) return { price: pos.target, why: 'alvo' };
+    }
+    return null;
+  }
+  function rOf(pos, price) {
+    var diff = price - pos.entry;
+    return (pos.side === 'buy' ? diff : -diff) / pos.risk;
+  }
+
+  /* ===================== renderizador ===================== */
+
+  function dims() {
+    return isNarrow()
+      ? { w: 520, h: 340, padL: 8, padR: 54, padT: 12, padB: 22, fs: 11 }
+      : { w: 940, h: 440, padL: 10, padR: 66, padT: 14, padB: 24, fs: 10.5 };
+  }
+  function partialBar(b, f) {
+    var c = b.o + (b.c - b.o) * f;
+    var hiFull = Math.max(b.o, b.c), loFull = Math.min(b.o, b.c);
+    var h = Math.max(b.o, c) + (b.h - hiFull) * f, l = Math.min(b.o, c) - (loFull - b.l) * f;
+    return { o: b.o, c: c, h: Math.max(h, Math.max(b.o, c)), l: Math.min(l, Math.min(b.o, c)) };
+  }
+  function ema(vals, period) {
+    var k = 2 / (period + 1), prev = vals[0], out = [];
+    for (var i = 0; i < vals.length; i++) { prev = i === 0 ? vals[0] : vals[i] * k + prev * (1 - k); out.push(prev); }
+    return out;
+  }
+  function fmtClock(m) {
+    m = ((m % 1440) + 1440) % 1440;
+    var hh = Math.floor(m / 60), mm = m % 60;
+    return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+  }
+  function fmtAxisTime(clock0, i, tfMin) {
+    if (tfMin < 1440) return fmtClock(clock0 + i * tfMin);
+    var d = new Date(2026, 0, 5 + Math.round(i * tfMin / 1440));
+    return ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2);
+  }
+
+  function drawChart(mountId, bars, o) {
+    var D = dims();
+    var end = o.end, frac = o.frac == null ? 1 : o.frac;
+    var zoom = clamp(o.zoom || CFG.zoom, 14, 150);
+    var right = clamp(end - (o.offset || 0), 5, end);
+    var start = Math.max(0, right - zoom + 1);
+    var scale = o.scale || {};
+    var i;
+
+    var vis = [];
+    for (i = start; i <= right; i++) {
+      vis.push(i === end && frac < 1 ? partialBar(bars[i], frac) : bars[i]);
+    }
+    if (!vis.length) return;
+
+    var closes = [];
+    for (i = 0; i <= right; i++) closes.push(i === end && frac < 1 ? partialBar(bars[i], frac).c : bars[i].c);
+    var e9 = ema(closes, 9), e21 = ema(closes, 21);
+
+    var lo = Infinity, hi = -Infinity;
+    vis.forEach(function (c) { lo = Math.min(lo, c.l); hi = Math.max(hi, c.h); });
+    for (i = start; i <= right; i++) { lo = Math.min(lo, e21[i]); hi = Math.max(hi, e21[i]); }
+    (o.levels || []).forEach(function (lv) { if (lv.v != null) { lo = Math.min(lo, lv.v); hi = Math.max(hi, lv.v); } });
+    if (o.position) {
+      lo = Math.min(lo, o.position.stop, o.position.target, o.position.entry);
+      hi = Math.max(hi, o.position.stop, o.position.target, o.position.entry);
+    }
+    var span = Math.max(hi - lo, 0.5);
+    var tMin = lo - span * 0.08, tMax = hi + span * 0.08;
+    if (!scale.ready || tMin < scale.min || tMax > scale.max || (scale.max - scale.min) > (tMax - tMin) * 1.5) {
+      scale.min = tMin; scale.max = tMax; scale.ready = true;
+    }
+    var dMin = scale.min, dMax = scale.max;
+
+    var plotL = D.padL, plotR = D.w - D.padR, plotT = D.padT, plotB = D.h - D.padB;
+    var y = function (v) { return plotB - ((v - dMin) / (dMax - dMin)) * (plotB - plotT); };
+    var slot = (plotR - plotL) / zoom;
+    var x = function (idx) { return plotL + (idx - start) * slot + slot / 2; };
+    var bodyW = Math.max(slot * 0.62, 1.6);
+
+    var s = '<svg class="chart" viewBox="0 0 ' + D.w + ' ' + D.h + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gráfico de candles">';
+
+    for (i = 0; i <= 5; i++) {
+      var pv = dMin + (dMax - dMin) * (i / 5), gy = y(pv);
+      s += '<line x1="' + plotL + '" y1="' + gy.toFixed(1) + '" x2="' + plotR + '" y2="' + gy.toFixed(1) + '" stroke="#1a2230" stroke-width="1"/>';
+      s += '<text x="' + (plotR + 7) + '" y="' + (gy + 3.4).toFixed(1) + '" font-family="IBM Plex Mono, monospace" font-size="' + D.fs + '" fill="#5a6576">' + pv.toFixed(2) + '</text>';
+    }
+
+    var tfMin = TF[curTf()].min, everyN = Math.max(4, Math.round(zoom / 6));
+    for (i = start; i <= right; i++) {
+      if ((i - start) % everyN !== 0) continue;
+      var tx = x(i);
+      s += '<line x1="' + tx.toFixed(1) + '" y1="' + plotT + '" x2="' + tx.toFixed(1) + '" y2="' + plotB + '" stroke="#141b26" stroke-width="1"/>';
+      s += '<text x="' + tx.toFixed(1) + '" y="' + (plotB + 15) + '" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="' + D.fs + '" fill="#5a6576">' + fmtAxisTime(o.clock0 || 0, i, tfMin) + '</text>';
+    }
+
+    if (o.shadeFrom != null && right > o.shadeFrom) {
+      var sx = x(Math.max(o.shadeFrom, start));
+      s += '<rect x="' + sx.toFixed(1) + '" y="' + plotT + '" width="' + Math.max(0, x(right) + slot / 2 - sx).toFixed(1) + '" height="' + (plotB - plotT) + '" fill="rgba(201,162,39,0.05)"/>';
+    }
+
+    (o.levels || []).forEach(function (lv) {
+      if (lv.v == null) return;
+      var ly = y(lv.v);
+      s += '<line x1="' + plotL + '" y1="' + ly.toFixed(1) + '" x2="' + plotR + '" y2="' + ly.toFixed(1) + '" stroke="#5b6b82" stroke-width="1" stroke-dasharray="4 4" stroke-opacity="0.9"/>';
+      s += '<text x="' + (plotR - 6) + '" y="' + (ly - 5).toFixed(1) + '" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="' + D.fs + '" fill="#8794a6">' + esc(lv.label) + '</text>';
+    });
+
+    if (o.position) {
+      var P = o.position;
+      var yE = y(P.entry), yS = y(P.stop), yT = y(P.target);
+      s += '<rect x="' + plotL + '" y="' + Math.min(yE, yS).toFixed(1) + '" width="' + (plotR - plotL) + '" height="' + Math.abs(yS - yE).toFixed(1) + '" fill="rgba(226,87,76,0.07)"/>';
+      s += '<rect x="' + plotL + '" y="' + Math.min(yE, yT).toFixed(1) + '" width="' + (plotR - plotL) + '" height="' + Math.abs(yT - yE).toFixed(1) + '" fill="rgba(38,161,123,0.07)"/>';
+      function pline(v, color, dash) {
+        var ly = y(v);
+        s += '<line x1="' + plotL + '" y1="' + ly.toFixed(1) + '" x2="' + plotR + '" y2="' + ly.toFixed(1) + '" stroke="' + color + '" stroke-width="1" stroke-dasharray="' + dash + '"/>';
+      }
+      pline(P.target, '#26a17b', '5 3');
+      pline(P.stop, '#e2574c', '5 3');
+      pline(P.entry, '#8794a6', '2 3');
+    }
+
+    function emaPath(arr, color, width) {
+      var pts = [];
+      for (var k = Math.max(start, 1); k <= right; k++) pts.push(x(k).toFixed(1) + ',' + y(arr[k]).toFixed(1));
+      if (pts.length > 1) s += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + color + '" stroke-width="' + width + '" stroke-opacity="0.9" stroke-linejoin="round"/>';
+    }
+    emaPath(e21, '#5b6b82', 1.2);
+    emaPath(e9, '#c9a227', 1.4);
+
+    vis.forEach(function (c, k) {
+      var idx = start + k, cx = x(idx), up = c.c >= c.o;
+      var col = up ? '#26a17b' : '#e2574c';
+      var yO = y(c.o), yC = y(c.c);
+      var top = Math.min(yO, yC), hgt = Math.max(Math.abs(yC - yO), 1.3);
+      var forming = (idx === end && frac < 1);
+      s += '<line x1="' + cx.toFixed(1) + '" y1="' + y(c.h).toFixed(1) + '" x2="' + cx.toFixed(1) + '" y2="' + y(c.l).toFixed(1) + '" stroke="' + col + '" stroke-width="1.2" stroke-opacity="' + (forming ? 0.85 : 1) + '"/>';
+      s += '<rect x="' + (cx - bodyW / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bodyW.toFixed(1) + '" height="' + hgt.toFixed(1) + '" rx="0.8" fill="' + col + '" fill-opacity="' + (forming ? 0.6 : 1) + '" stroke="' + col + '" stroke-width="0.8"/>';
+    });
+
+    if (o.highlight != null && o.highlight >= start && o.highlight <= right) {
+      var hb = bars[o.highlight], hx = x(o.highlight);
+      var hy1 = y(hb.h) - 7, hy2 = y(hb.l) + 7;
+      var hcol = o.highlightColor || '#e8c468';
+      s += '<rect x="' + (hx - slot * 0.62).toFixed(1) + '" y="' + hy1.toFixed(1) + '" width="' + (slot * 1.24).toFixed(1) + '" height="' + (hy2 - hy1).toFixed(1) + '" rx="3" fill="none" stroke="' + hcol + '" stroke-width="1.6" stroke-opacity="0.95"/>';
+    }
+
+    (o.markers || []).forEach(function (m) {
+      if (m.idx < start || m.idx > right) return;
+      var mx = x(m.idx), my = y(m.price);
+      if (m.kind === 'exit') {
+        s += '<line x1="' + (mx - 4) + '" y1="' + (my - 4) + '" x2="' + (mx + 4) + '" y2="' + (my + 4) + '" stroke="#e9ecf1" stroke-width="1.6"/>';
+        s += '<line x1="' + (mx - 4) + '" y1="' + (my + 4) + '" x2="' + (mx + 4) + '" y2="' + (my - 4) + '" stroke="#e9ecf1" stroke-width="1.6"/>';
+      } else {
+        var up2 = m.side === 'buy', mc = up2 ? '#26a17b' : '#e2574c';
+        var oy = up2 ? my + 12 : my - 12;
+        var tri = up2
+          ? mx + ',' + (oy - 6) + ' ' + (mx - 5) + ',' + (oy + 3) + ' ' + (mx + 5) + ',' + (oy + 3)
+          : mx + ',' + (oy + 6) + ' ' + (mx - 5) + ',' + (oy - 3) + ' ' + (mx + 5) + ',' + (oy - 3);
+        s += '<polygon points="' + tri + '" fill="' + mc + '"/>';
+      }
+    });
+
+    if (o.entryLine != null && o.entryLine >= start && o.entryLine <= right) {
+      var ex = x(o.entryLine);
+      s += '<line x1="' + ex.toFixed(1) + '" y1="' + plotT + '" x2="' + ex.toFixed(1) + '" y2="' + plotB + '" stroke="#e8c468" stroke-width="1" stroke-dasharray="3 3" stroke-opacity="0.65"/>';
+    }
+
+    var lastC = vis[vis.length - 1].c;
+    var tags = [];
+    if (o.position) {
+      tags.push({ y: y(o.position.target), text: o.position.target.toFixed(2), fill: '#26a17b' });
+      tags.push({ y: y(o.position.stop), text: o.position.stop.toFixed(2), fill: '#e2574c' });
+    }
+    tags.push({ y: y(lastC), text: lastC.toFixed(2), fill: '#c9a227' });
+    tags.sort(function (a, b) { return a.y - b.y; });
+    for (i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 17) tags[i].y = tags[i - 1].y + 17;
+    var overflow = tags.length ? tags[tags.length - 1].y - (plotB - 2) : 0;
+    if (overflow > 0) tags.forEach(function (t) { t.y -= overflow; });
+    tags.forEach(function (t) {
+      var ty = clamp(t.y, plotT + 9, plotB - 2);
+      s += '<rect x="' + (plotR + 3) + '" y="' + (ty - 8).toFixed(1) + '" width="' + (D.padR - 6) + '" height="16" rx="3" fill="' + t.fill + '"/>';
+      s += '<text x="' + (plotR + 7) + '" y="' + (ty + 3.6).toFixed(1) + '" font-family="IBM Plex Mono, monospace" font-size="' + D.fs + '" font-weight="600" fill="#0b0f16">' + t.text + '</text>';
+    });
+
+    if (o.badge) {
+      var bw = 116, bh = 22;
+      s += '<rect x="' + (plotR - bw - 6) + '" y="' + (plotT + 6) + '" width="' + bw + '" height="' + bh + '" rx="4" fill="rgba(8,11,16,0.88)" stroke="' + o.badge.color + '" stroke-width="1"/>';
+      s += '<text x="' + (plotR - bw + 4) + '" y="' + (plotT + 21) + '" font-family="IBM Plex Mono, monospace" font-size="11.5" font-weight="600" fill="' + o.badge.color + '">' + esc(o.badge.text) + '</text>';
+    }
+
+    if (o.callout) {
+      var cw = isNarrow() ? 250 : 360, chh = o.callout.sub ? 44 : 26;
+      var cx0 = plotL + 6, cy0 = plotT + 6;
+      s += '<rect x="' + cx0 + '" y="' + cy0 + '" width="' + cw + '" height="' + chh + '" rx="5" fill="rgba(8,11,16,0.9)" stroke="' + o.callout.color + '" stroke-width="1.3"/>';
+      s += '<text x="' + (cx0 + 11) + '" y="' + (cy0 + 17) + '" font-family="IBM Plex Mono, monospace" font-size="12" font-weight="700" fill="' + o.callout.color + '">' + esc(o.callout.title) + '</text>';
+      if (o.callout.sub) {
+        var maxCh = isNarrow() ? 38 : 56;
+        var sub = o.callout.sub.length > maxCh ? o.callout.sub.slice(0, maxCh - 1) + '…' : o.callout.sub;
+        s += '<text x="' + (cx0 + 11) + '" y="' + (cy0 + 34) + '" font-family="IBM Plex Sans, sans-serif" font-size="11.5" fill="#8794a6">' + esc(sub) + '</text>';
+      }
+    }
+
+    s += '</svg>';
+    el(mountId).innerHTML = s;
+  }
+
+  /* ===================== TREINO ===================== */
+
+  var T = { scn: null, end: 0, frac: 1, offset: 0, scale: {}, answered: false, choice: null, entryIdx: null, timer: null, reveal: null, playing: false, idx: 0, sub: 4, flags: {} };
+  var SUB = 4, GRACE = 2;
+
+  function tClearTimers() {
+    if (T.timer) { clearInterval(T.timer); T.timer = null; }
+    if (T.reveal) { clearInterval(T.reveal); T.reveal = null; }
+    T.playing = false;
+  }
+  function tDraw() {
+    if (!T.scn) return;
+    var levels = [];
+    if (T.scn.support != null) levels.push({ v: T.scn.support, label: T.scn.supLabel || 'Suporte' });
+    if (T.scn.resistance != null) levels.push({ v: T.scn.resistance, label: T.scn.resLabel || 'Resistência' });
+    drawChart('t-chart', T.scn.bars, {
+      end: T.end, frac: T.frac, zoom: CFG.zoom, offset: T.offset, scale: T.scale,
+      levels: levels, clock0: T.scn.clock0,
+      shadeFrom: T.answered ? T.entryIdx : null,
+      entryLine: T.answered ? T.entryIdx : null,
+      markers: T.answered && (T.choice === 'buy' || T.choice === 'sell')
+        ? [{ idx: T.entryIdx, price: T.scn.bars[T.entryIdx].c, side: T.choice, kind: 'entry' }] : []
+    });
+  }
+  function tNewRound() {
+    tClearTimers();
+    OUT_K = CFG.style === 'swing' ? 1.6 : 1;
+    T.scn = buildScenario();
+    T.answered = false; T.choice = null; T.entryIdx = null; T.offset = 0; T.scale = {};
+    el('t-fb').innerHTML = ''; el('t-next').innerHTML = '';
+    el('t-pattern').hidden = true;
+    ['t-buy', 't-sell', 't-wait'].forEach(function (id) { el(id).disabled = false; });
+    el('t-controls').style.display = 'flex';
+    if (CFG.live) {
+      T.idx = Math.max(6, Math.min(T.scn.decisionIndex - Math.floor(rnd(8, 16)), T.scn.decisionIndex - 3));
+      T.sub = SUB; T.end = T.idx; T.frac = 1;
+      tDraw(); tStartLive();
+    } else {
+      T.end = T.scn.decisionIndex; T.frac = 1; tDraw();
+    }
+    syncHeads();
+  }
+  function tStartLive() { T.playing = true; el('t-pause').textContent = 'Pausar'; T.timer = setInterval(tTick, (950 / CFG.speed) / SUB); }
+  function tPauseLive() { if (T.timer) { clearInterval(T.timer); T.timer = null; } T.playing = false; el('t-pause').textContent = 'Continuar'; }
+  function tTogglePause() { if (!CFG.live || T.answered) return; if (T.playing) tPauseLive(); else tStartLive(); }
+  function tTick() {
+    T.sub++;
+    if (T.sub > SUB) { T.idx++; T.sub = 1; T.offset = 0; }
+    if (T.idx >= T.scn.bars.length - 1) { tClearTimers(); tResolve('wait', null); return; }
+    T.end = T.idx; T.frac = T.sub / SUB; tDraw();
+    if (T.idx + T.frac >= T.scn.decisionIndex + 1 + GRACE) { tClearTimers(); tResolve('wait', null); }
+  }
+  function tAnswer(choice) {
+    if (!T.scn || T.answered) return;
+    if (CFG.live) { var pos = T.idx + T.sub / SUB; tClearTimers(); tResolve(choice, pos); }
+    else tResolve(choice, null);
+  }
+  function tResolve(choice, pos) {
+    T.answered = true; T.choice = choice;
+    ['t-buy', 't-sell', 't-wait'].forEach(function (id) { el(id).disabled = true; });
+    el('t-controls').style.display = 'none';
+    var scn = T.scn, correct, early = false, late = false;
+    if (!CFG.live) { T.entryIdx = scn.decisionIndex; correct = (choice === scn.correct); }
+    else {
+      var clickIdx = pos == null ? scn.decisionIndex : clamp(Math.round(pos), 0, scn.bars.length - 1);
+      T.entryIdx = choice === 'wait' ? scn.decisionIndex : clickIdx;
+      if (choice === 'wait') correct = (scn.correct === 'wait');
+      else if (scn.correct === 'wait' || choice !== scn.correct) correct = false;
+      else {
+        early = pos < scn.decisionIndex + 0.5;
+        late = pos > scn.decisionIndex + 1 + GRACE;
+        correct = !early && !late;
+      }
+    }
+    STATS.rounds++; STATS.cats[scn.correct].t++; STATS.fams[scn.family].t++;
+    if (correct) {
+      STATS.score++; STATS.streak++; STATS.cats[scn.correct].c++; STATS.fams[scn.family].c++;
+      if (STATS.streak > STATS.best) STATS.best = STATS.streak;
+    } else STATS.streak = 0;
+    refreshStats(); saveState();
+    el('t-pattern-text').textContent = scn.pattern;
+    el('t-pattern').hidden = false;
+    T.flags = { correct: correct, early: early, late: late };
+    tRunReveal();
+  }
+  function tRunReveal() {
+    var target = T.scn.bars.length - 1;
+    T.frac = 1; T.offset = 0;
+    if (T.end >= target) { tFinish(); return; }
+    T.reveal = setInterval(function () {
+      T.end++; tDraw();
+      if (T.end >= target) { clearInterval(T.reveal); T.reveal = null; tFinish(); }
+    }, 80);
+  }
+  function actionWord(a) { return a === 'buy' ? 'comprar' : (a === 'sell' ? 'vender' : (CFG.live ? 'deixar passar' : 'esperar')); }
+  function tFinish() {
+    tDraw();
+    var scn = T.scn, f = T.flags;
+    var entry = scn.bars[scn.decisionIndex].c, exit = scn.bars[scn.bars.length - 1].c;
+    var chg = (exit - entry) / entry * 100, chip;
+    if (T.choice === 'buy' || T.choice === 'sell') {
+      var gain = T.choice === 'buy' ? chg : -chg;
+      chip = '<span class="result-chip ' + (gain >= 0 ? 'up' : 'down') + '">Resultado: ' + (gain >= 0 ? '+' : '') + gain.toFixed(2) + '% em ' + (scn.bars.length - 1 - scn.decisionIndex) + ' candles</span>';
+    } else {
+      chip = '<span class="result-chip">Mercado andou ' + (chg >= 0 ? '+' : '') + chg.toFixed(2) + '% depois</span>';
+    }
+    var head = f.correct ? 'Certo — ' + scn.pattern
+      : f.early ? 'Cedo demais — a direção estava certa'
+      : f.late ? 'Tarde — o gatilho já tinha passado'
+      : 'Não foi dessa vez — o certo era ' + actionWord(scn.correct);
+    var extra = '';
+    if (CFG.live && f.early) extra = '<p>Você acertou a leitura, mas clicou antes do candle de confirmação fechar. Antecipar o gatilho é o erro que mais custa caro no tempo real.</p>';
+    else if (CFG.live && T.choice === 'wait' && scn.correct !== 'wait') extra = '<p>Havia uma entrada válida aqui e você deixou passar. Perder trade não quebra ninguém — mas repare no que faltou para reconhecer o gatilho a tempo.</p>';
+    el('t-fb').innerHTML =
+      '<div class="fb ' + (f.correct ? 'ok' : 'no') + '"><div class="fb-head"><span>' + esc(head) + '</span>' + chip + '</div>' +
+      '<div class="fb-body"><p>' + esc(scn.explain) + '</p>' + extra +
+      '<p class="fb-tip"><strong>Como operar:</strong> ' + esc(scn.tip) + '</p></div></div>';
+    el('t-next').innerHTML = '<button class="next-btn" id="t-next-btn" type="button">Próxima rodada</button>';
+    el('t-next-btn').onclick = tNewRound;
+  }
+
+  /* ===================== DESAFIO ===================== */
+
+  var C = { scn: null, end: 0, offset: 0, scale: {}, pos: null, timer: null, done: false, choice: null, entryIdx: null, exitIdx: null, markers: [] };
+
+  function cClear() { if (C.timer) { clearInterval(C.timer); C.timer = null; } }
+  function cDraw() {
+    if (!C.scn) return;
+    var levels = [];
+    if (C.scn.support != null) levels.push({ v: C.scn.support, label: C.scn.supLabel || 'Suporte' });
+    if (C.scn.resistance != null) levels.push({ v: C.scn.resistance, label: C.scn.resLabel || 'Resistência' });
+    var badge = null;
+    if (C.pos) {
+      var r = C.pos.closed && C.pos.finalR != null ? C.pos.finalR : rOf(C.pos, C.scn.bars[C.end].c);
+      badge = { text: (C.pos.closed ? 'Encerrada  ' : 'Aberta  ') + fmtR(r), color: r >= 0 ? '#26a17b' : '#e2574c' };
+    }
+    drawChart('c-chart', C.scn.bars, {
+      end: C.end, frac: 1, zoom: CFG.zoom, offset: C.offset, scale: C.scale,
+      levels: levels, clock0: C.scn.clock0,
+      position: C.pos,
+      shadeFrom: C.entryIdx, entryLine: C.entryIdx, markers: C.markers, badge: badge
+    });
+  }
+  function cNewRound() {
+    cClear();
+    OUT_K = CFG.style === 'swing' ? 5 : 3.4;
+    C.scn = buildScenario();
+    C.pos = null; C.done = false; C.choice = null; C.entryIdx = null; C.exitIdx = null;
+    C.markers = []; C.offset = 0; C.scale = {};
+    C.end = C.scn.decisionIndex;
+    el('c-fb').innerHTML = ''; el('c-next').innerHTML = '';
+    el('c-pattern').hidden = true;
+    el('c-running').hidden = true;
+    ['c-buy', 'c-sell', 'c-skip'].forEach(function (id) { el(id).disabled = false; });
+    el('c-controls').style.display = 'flex';
+    el('c-pos-meta').innerHTML = '<p class="empty-log">Nenhuma posição aberta. Leia o gráfico e decida: comprar, vender ou passar.</p>';
+    cDraw(); syncHeads();
+  }
+  function cDecide(choice) {
+    if (!C.scn || C.done) return;
+    C.choice = choice;
+    ['c-buy', 'c-sell', 'c-skip'].forEach(function (id) { el(id).disabled = true; });
+    el('c-controls').style.display = 'none';
+    el('c-pattern-text').textContent = C.scn.pattern;
+    el('c-pattern').hidden = false;
+    if (choice === 'wait') { C.pos = null; }
+    else {
+      C.pos = tradePlan(C.scn.bars, C.scn.decisionIndex, choice);
+      C.pos.closed = false;
+      C.entryIdx = C.scn.decisionIndex;
+      C.markers.push({ idx: C.entryIdx, price: C.pos.entry, side: choice, kind: 'entry' });
+      el('c-running').hidden = false;
+      cPosMeta();
+    }
+    cPlayout();
+  }
+  function cPosMeta() {
+    if (!C.pos) return;
+    var cur = C.scn.bars[C.end].c, r = rOf(C.pos, cur);
+    el('c-pos-meta').innerHTML =
+      '<div class="meta-row"><span>Direção</span><span style="color:' + (C.pos.side === 'buy' ? 'var(--bull)' : 'var(--bear)') + '">' + (C.pos.side === 'buy' ? 'Compra' : 'Venda') + '</span></div>' +
+      '<div class="meta-row"><span>Entrada</span><span>' + C.pos.entry.toFixed(2) + '</span></div>' +
+      '<div class="meta-row"><span>Stop</span><span style="color:var(--bear)">' + C.pos.stop.toFixed(2) + '</span></div>' +
+      '<div class="meta-row"><span>Alvo (' + rr() + 'R)</span><span style="color:var(--bull)">' + C.pos.target.toFixed(2) + '</span></div>' +
+      '<div class="meta-row"><span>Flutuante</span><span style="color:' + (r >= 0 ? 'var(--bull)' : 'var(--bear)') + '">' + fmtR(r) + '</span></div>';
+  }
+  function cPlayout() {
+    var last = C.scn.bars.length - 1;
+    var speed = Math.max(45, 130 / CFG.speed);
+    C.timer = setInterval(function () {
+      if (C.end >= last) { cClear(); cSettle(null); return; }
+      C.end++; C.offset = 0;
+      if (C.pos && !C.pos.closed) {
+        var hit = hitCheck(C.pos, C.scn.bars[C.end]);
+        cDraw(); cPosMeta();
+        if (hit) { cClear(); cSettle(hit); return; }
+      } else cDraw();
+    }, speed);
+  }
+  function cSettle(hit) {
+    C.done = true;
+    var scn = C.scn, html, headCls, head, chip = '';
+    if (C.pos) {
+      var exitPrice = hit ? hit.price : scn.bars[scn.bars.length - 1].c;
+      var why = hit ? hit.why : 'fim do gráfico';
+      var r = rOf(C.pos, exitPrice);
+      C.pos.closed = true; C.pos.finalR = r;
+      C.exitIdx = C.end;
+      C.markers.push({ idx: C.end, price: exitPrice, kind: 'exit' });
+      CHAL.trades++; CHAL.totalR += r;
+      if (r > 0) CHAL.wins++;
+      CHAL.log.unshift({ side: C.pos.side, r: r, why: why, pattern: scn.pattern });
+      if (CHAL.log.length > 12) CHAL.log.pop();
+      headCls = r >= 0 ? 'ok' : 'no';
+      head = (r >= 0 ? 'Operação no lucro' : 'Operação no prejuízo') + ' — saída no ' + why;
+      chip = '<span class="result-chip ' + (r >= 0 ? 'up' : 'down') + '">' + fmtR(r) + '</span>';
+      var judgement = (scn.correct === 'wait')
+        ? '<p>O setup era de <strong>não operar</strong>: ' + esc(scn.pattern.toLowerCase()) + '. Mesmo quando uma entrada dessas dá certo por sorte, ela é um erro de processo — repetida cem vezes, ela perde dinheiro.</p>'
+        : (C.pos.side === scn.correct
+          ? '<p>Leitura correta do setup. Entrada, stop na estrutura e alvo em ' + rr() + 'R: é exatamente esse processo que você quer repetir.</p>'
+          : '<p>Você operou na direção contrária à do setup. Antes de clicar, confirme de que lado está a tendência e onde o preço reagiu.</p>');
+      html = '<div class="fb ' + headCls + '"><div class="fb-head"><span>' + esc(head) + '</span>' + chip + '</div><div class="fb-body">' +
+        judgement + '<p>' + esc(scn.explain) + '</p><p class="fb-tip"><strong>Como operar:</strong> ' + esc(scn.tip) + '</p></div></div>';
+      el('c-pos-meta').innerHTML = '<p class="empty-log">Posição encerrada no ' + why + ' — ' + fmtR(r) + '.</p>';
+      el('c-running').hidden = true;
+    } else {
+      CHAL.skipped++;
+      var good = (scn.correct === 'wait');
+      if (good) CHAL.goodSkips++;
+      headCls = good ? 'ok' : 'neutral';
+      head = good ? 'Boa decisão — não havia trade aqui' : 'Entrada perdida — o setup era válido';
+      var hypo = '';
+      if (!good) {
+        var plan = tradePlan(scn.bars, scn.decisionIndex, scn.correct);
+        plan.closed = false;
+        var res = null;
+        for (var i = scn.decisionIndex + 1; i < scn.bars.length; i++) {
+          var h = hitCheck(plan, scn.bars[i]);
+          if (h) { res = { r: rOf(plan, h.price), why: h.why }; break; }
+        }
+        if (!res) res = { r: rOf(plan, scn.bars[scn.bars.length - 1].c), why: 'fim do gráfico' };
+        hypo = '<p>Quem entrou no gatilho levou <strong>' + fmtR(res.r) + '</strong> (saída no ' + res.why + ').</p>';
+        chip = '<span class="result-chip">' + fmtR(res.r) + ' perdidos</span>';
+      } else {
+        chip = '<span class="result-chip up">0R arriscados</span>';
+      }
+      html = '<div class="fb ' + headCls + '"><div class="fb-head"><span>' + esc(head) + '</span>' + chip + '</div><div class="fb-body">' +
+        hypo + '<p>' + esc(scn.explain) + '</p><p class="fb-tip"><strong>Como operar:</strong> ' + esc(scn.tip) + '</p></div></div>';
+    }
+    el('c-fb').innerHTML = html;
+    el('c-next').innerHTML = '<button class="next-btn" id="c-next-btn" type="button">Próximo desafio</button>';
+    el('c-next-btn').onclick = cNewRound;
+    cDraw(); cRefresh(); saveState();
+    // deixa o gráfico andar mais alguns candles depois da saída, para ver o que veio depois
+    var last = scn.bars.length - 1, extra = 0;
+    if (C.end < last) {
+      C.timer = setInterval(function () {
+        if (C.end >= last || extra >= 7) { cClear(); return; }
+        C.end++; extra++; C.offset = 0; cDraw();
+      }, Math.max(70, 150 / CFG.speed));
+    }
+  }
+  function cRefresh() {
+    var r = el('c-r');
+    r.textContent = fmtR(CHAL.totalR);
+    r.className = 'stat-value ' + (CHAL.totalR > 0 ? 'up' : (CHAL.totalR < 0 ? 'down' : ''));
+    el('c-trades').textContent = CHAL.trades + (CHAL.trades === 1 ? ' operação' : ' operações');
+    el('c-win').textContent = CHAL.trades ? Math.round(CHAL.wins / CHAL.trades * 100) + '%' : '—';
+    el('c-skipped').textContent = CHAL.skipped + ' passadas · ' + CHAL.goodSkips + ' certas';
+    var log = el('c-log');
+    if (!CHAL.log.length) { log.innerHTML = '<p class="empty-log">O histórico aparece aqui conforme você opera.</p>'; return; }
+    log.innerHTML = CHAL.log.map(function (t) {
+      return '<div class="trade-row"><span class="trade-side ' + t.side + '">' + (t.side === 'buy' ? 'C' : 'V') + '</span>' +
+        '<span style="color:var(--muted-dim)">' + esc(t.why) + '</span>' +
+        '<span class="trade-r ' + (t.r >= 0 ? 'up' : 'down') + '">' + fmtR(t.r) + '</span></div>';
+    }).join('');
+  }
+
+  /* ===================== REPLAY ===================== */
+
+  var R = { bars: [], idx: 60, sub: 4, offset: 0, scale: {}, timer: null, playing: false, pos: null, markers: [], clock0: 540 };
+
+  function rClear() { if (R.timer) { clearInterval(R.timer); R.timer = null; } R.playing = false; el('r-play').textContent = '▶ Rodar'; el('r-flag').hidden = true; }
+  function rDraw() {
+    var badge = null;
+    if (R.pos) {
+      var rr2 = rOf(R.pos, R.bars[R.idx].c);
+      badge = { text: 'Aberta  ' + fmtR(rr2), color: rr2 >= 0 ? '#26a17b' : '#e2574c' };
+    }
+    drawChart('r-chart', R.bars, {
+      end: R.idx, frac: R.sub / 4, zoom: CFG.zoom, offset: R.offset, scale: R.scale,
+      clock0: R.clock0, position: R.pos, markers: R.markers, badge: badge
+    });
+    el('r-chip-bar').textContent = (R.idx - 59) + ' / ' + (R.bars.length - 60);
+    if (R.pos) rPosMeta();
+  }
+  function rNewMarket() {
+    rClear();
+    R.bars = generateMarket(420);
+    R.idx = 60; R.sub = 4; R.offset = 0; R.scale = {}; R.pos = null; R.markers = [];
+    R.clock0 = 540;
+    el('r-close').disabled = true;
+    el('r-fb').innerHTML = '';
+    el('r-pos-meta').innerHTML = '<p class="empty-log">Sem posição aberta.</p>';
+    el('r-open').textContent = 'sem posição';
+    rDraw(); syncHeads();
+  }
+  function rPlay() {
+    if (R.playing) { rClear(); return; }
+    R.playing = true; el('r-play').textContent = '⏸ Pausar'; el('r-flag').hidden = false;
+    R.timer = setInterval(rTick, (950 / CFG.speed) / 4);
+  }
+  function rTick() {
+    R.sub++;
+    if (R.sub > 4) {
+      R.idx++; R.sub = 1; R.offset = 0;
+      if (R.idx >= R.bars.length - 1) { rClear(); return; }
+      if (R.pos) {
+        var hit = hitCheck(R.pos, R.bars[R.idx]);
+        if (hit) { rCloseAt(hit.price, hit.why); }
+      }
+    }
+    rDraw();
+  }
+  function rStep() {
+    if (R.playing) rClear();
+    if (R.idx >= R.bars.length - 1) return;
+    R.idx++; R.sub = 4; R.offset = 0;
+    if (R.pos) { var hit = hitCheck(R.pos, R.bars[R.idx]); if (hit) rCloseAt(hit.price, hit.why); }
+    rDraw();
+  }
+  function rOpen(side) {
+    if (R.pos || !R.bars.length) return;
+    R.pos = tradePlan(R.bars, R.idx, side);
+    R.markers.push({ idx: R.idx, price: R.pos.entry, side: side, kind: 'entry' });
+    el('r-close').disabled = false;
+    el('r-open').textContent = side === 'buy' ? 'comprado' : 'vendido';
+    rPosMeta(); rDraw();
+  }
+  function rPosMeta() {
+    if (!R.pos) { el('r-pos-meta').innerHTML = '<p class="empty-log">Sem posição aberta.</p>'; return; }
+    var cur = R.bars[R.idx].c, r = rOf(R.pos, cur);
+    el('r-pos-meta').innerHTML =
+      '<div class="meta-row"><span>Direção</span><span style="color:' + (R.pos.side === 'buy' ? 'var(--bull)' : 'var(--bear)') + '">' + (R.pos.side === 'buy' ? 'Compra' : 'Venda') + '</span></div>' +
+      '<div class="meta-row"><span>Entrada</span><span>' + R.pos.entry.toFixed(2) + '</span></div>' +
+      '<div class="meta-row"><span>Stop</span><span style="color:var(--bear)">' + R.pos.stop.toFixed(2) + '</span></div>' +
+      '<div class="meta-row"><span>Alvo (' + rr() + 'R)</span><span style="color:var(--bull)">' + R.pos.target.toFixed(2) + '</span></div>' +
+      '<div class="meta-row"><span>Flutuante</span><span style="color:' + (r >= 0 ? 'var(--bull)' : 'var(--bear)') + '">' + fmtR(r) + '</span></div>';
+  }
+  function rCloseAt(price, why) {
+    if (!R.pos) return;
+    var r = rOf(R.pos, price);
+    R.markers.push({ idx: R.idx, price: price, kind: 'exit' });
+    RSTATS.trades++; RSTATS.totalR += r; if (r > 0) RSTATS.wins++;
+    RSTATS.log.unshift({ side: R.pos.side, r: r, why: why });
+    if (RSTATS.log.length > 14) RSTATS.log.pop();
+    R.pos = null;
+    el('r-close').disabled = true;
+    el('r-open').textContent = 'sem posição';
+    rPosMeta(); rRefresh(); rDraw(); saveState();
+  }
+  function rRefresh() {
+    var t = el('r-total');
+    t.textContent = fmtR(RSTATS.totalR);
+    t.className = 'stat-value ' + (RSTATS.totalR > 0 ? 'up' : (RSTATS.totalR < 0 ? 'down' : ''));
+    el('r-count').textContent = RSTATS.trades + (RSTATS.trades === 1 ? ' operação' : ' operações');
+    el('r-win').textContent = RSTATS.trades ? Math.round(RSTATS.wins / RSTATS.trades * 100) + '%' : '—';
+    var log = el('r-log');
+    if (!RSTATS.log.length) { log.innerHTML = '<p class="empty-log">Compre ou venda em qualquer ponto do replay para começar o histórico.</p>'; return; }
+    log.innerHTML = RSTATS.log.map(function (t2) {
+      return '<div class="trade-row"><span class="trade-side ' + t2.side + '">' + (t2.side === 'buy' ? 'C' : 'V') + '</span>' +
+        '<span style="color:var(--muted-dim)">' + esc(t2.why) + '</span>' +
+        '<span class="trade-r ' + (t2.r >= 0 ? 'up' : 'down') + '">' + fmtR(t2.r) + '</span></div>';
+    }).join('');
+  }
+
+  /* ===================== CAFEINADO ===================== */
+
+  var CAF_TFS = ['M1', 'M5', 'M15', 'H1', 'H4'];
+  var CAF_CATS = { buy: 'Compra', sell: 'Venda', brk: 'Saída de consolidação' };
+
+  var K = {
+    list: [], i: 0, scn: null, end: 0, sub: 4, frac: 1, phase: 'idle',
+    timer: null, hold: null, pos: null, markers: [], scale: {}, playing: false,
+    done: {}, result: null
+  };
+
+  function kBuildList() {
+    var buys = [['pullbackEntrada', 1], ['nivelReacao', 1], ['exaustao', -1]];
+    var sells = [['pullbackEntrada', -1], ['nivelReacao', -1], ['exaustao', 1]];
+    var brks = [['rompimento', 1], ['rompimento', -1]];
+    var list = [], i;
+    for (i = 0; i < 10; i++) list.push({ cat: 'buy', tf: CAF_TFS[i % 5], fn: buys[i % 3][0], dir: buys[i % 3][1] });
+    for (i = 0; i < 10; i++) list.push({ cat: 'sell', tf: CAF_TFS[i % 5], fn: sells[i % 3][0], dir: sells[i % 3][1] });
+    for (i = 0; i < 10; i++) list.push({ cat: 'brk', tf: CAF_TFS[i % 5], fn: brks[i % 2][0], dir: brks[i % 2][1] });
+    return list;
+  }
+
+  function kStop() {
+    if (K.timer) { clearInterval(K.timer); K.timer = null; }
+    if (K.hold) { clearTimeout(K.hold); K.hold = null; }
+  }
+  function kColor() { return K.scn && K.scn.correct === 'buy' ? '#26a17b' : '#e2574c'; }
+  function kSeen() {
+    var c = { buy: 0, sell: 0, brk: 0 };
+    Object.keys(K.done).forEach(function (idx) { var it = K.list[idx]; if (it) c[it.cat]++; });
+    return c;
+  }
+  function kCallout() {
+    var side = K.scn.correct, cat = K.list[K.i].cat, title;
+    if (cat === 'brk') title = side === 'buy' ? '▲ COMPRA NO ROMPIMENTO' : '▼ VENDA NO ROMPIMENTO';
+    else title = side === 'buy' ? '▲ COMPRA AQUI' : '▼ VENDA AQUI';
+    return { title: title, sub: K.scn.pattern, color: kColor() };
+  }
+  function kRead() {
+    el('k-read').innerHTML =
+      '<p class="caf-lead"><strong>' + esc(K.scn.pattern) + '</strong></p>' +
+      '<p class="caf-lead">' + esc(K.scn.explain) + '</p>' +
+      '<p class="fb-tip" style="font-size:12px"><strong>Como operar:</strong> ' + esc(K.scn.tip) + '</p>';
+  }
+  function kSync() {
+    var it = K.list[K.i];
+    el('k-chip-tf').textContent = TF[it.tf].label;
+    el('k-chip-cat').textContent = CAF_CATS[it.cat];
+    el('k-chip-step').textContent = (K.i + 1) + ' / ' + K.list.length;
+    el('k-meta-step').textContent = (K.i + 1) + ' / ' + K.list.length;
+    el('k-meta-tf').textContent = TF[it.tf].label;
+    el('k-meta-cat').textContent = CAF_CATS[it.cat];
+    el('k-zoom-lbl').textContent = CFG.zoom;
+    el('k-progress').style.width = (K.i / (K.list.length - 1) * 100).toFixed(1) + '%';
+    var c = kSeen();
+    el('k-seen-buy').textContent = c.buy + ' / 10';
+    el('k-seen-sell').textContent = c.sell + ' / 10';
+    el('k-seen-brk').textContent = c.brk + ' / 10';
+    ['buy', 'sell', 'brk'].forEach(function (cat) { el('tab-' + cat).className = 'tab' + (it.cat === cat ? ' sel' : ''); });
+  }
+  function kDraw() {
+    if (!K.scn) return;
+    var levels = [];
+    if (K.scn.support != null) levels.push({ v: K.scn.support, label: K.scn.supLabel || 'Suporte' });
+    if (K.scn.resistance != null) levels.push({ v: K.scn.resistance, label: K.scn.resLabel || 'Resistência' });
+    var o = {
+      end: K.end, frac: K.frac, zoom: CFG.zoom, offset: 0, scale: K.scale,
+      levels: levels, clock0: K.scn.clock0, markers: K.markers
+    };
+    if (K.phase === 'mark' || K.phase === 'play' || K.phase === 'result') {
+      o.position = K.pos;
+      o.entryLine = K.scn.decisionIndex;
+      o.shadeFrom = K.scn.decisionIndex;
+      o.callout = kCallout();
+    }
+    if (K.phase === 'mark') { o.highlight = K.scn.decisionIndex; o.highlightColor = kColor(); }
+    if ((K.phase === 'play' || K.phase === 'result') && K.pos) {
+      var r = K.result ? K.result.r : rOf(K.pos, K.scn.bars[K.end].c);
+      o.badge = { text: (K.result ? 'Encerrada  ' : 'Aberta  ') + fmtR(r), color: r >= 0 ? '#26a17b' : '#e2574c' };
+    }
+    drawChart('k-chart', K.scn.bars, o);
+  }
+  function kLoad(i) {
+    kStop();
+    if (!K.list.length) K.list = kBuildList();
+    K.i = clamp(i, 0, K.list.length - 1);
+    var it = K.list[K.i];
+    TF_OVERRIDE = it.tf;
+    OUT_K = 3;
+    var scn = SETUPS[it.fn](params(), it.dir);
+    if (scn.support === undefined) scn.support = null;
+    if (scn.resistance === undefined) scn.resistance = null;
+    scn.clock0 = Math.floor(rnd(9, 15)) * 60;
+    K.scn = scn;
+    K.pos = null; K.markers = []; K.scale = {}; K.result = null;
+    K.end = clamp(scn.decisionIndex - Math.floor(rnd(9, 17)), 6, Math.max(6, scn.decisionIndex - 2));
+    K.sub = SUB; K.frac = 1; K.phase = 'run';
+    el('k-pattern').hidden = true;
+    el('k-fb').innerHTML = '';
+    kRead(); kSync(); kDraw();
+  }
+  function kResume() {
+    kStop();
+    if (!K.playing) return;
+    if (K.phase === 'run') K.timer = setInterval(kTickRun, (820 / CFG.speed) / SUB);
+    else if (K.phase === 'mark') K.hold = setTimeout(kAfterMark, 2400 / CFG.speed);
+    else if (K.phase === 'play') K.timer = setInterval(kTickPlay, Math.max(60, 150 / CFG.speed));
+    else if (K.phase === 'result') K.hold = setTimeout(kNext, 2600 / CFG.speed);
+  }
+  function kPlay() {
+    if (K.playing) { kPause(); return; }
+    if (!K.scn) kLoad(0);
+    K.playing = true;
+    el('k-play').textContent = '⏸ Pausar';
+    el('k-flag').hidden = false;
+    kResume();
+  }
+  function kPause() {
+    K.playing = false; kStop();
+    el('k-play').textContent = '▶ Rodar série';
+    el('k-flag').hidden = true;
+  }
+  function kTickRun() {
+    K.sub++;
+    if (K.sub > SUB) {
+      if (K.end >= K.scn.decisionIndex) { kEnterMark(); return; }
+      K.end++; K.sub = 1;
+    }
+    K.frac = K.sub / SUB;
+    kDraw();
+  }
+  function kEnterMark() {
+    kStop();
+    K.end = K.scn.decisionIndex; K.frac = 1; K.sub = SUB; K.phase = 'mark';
+    K.pos = tradePlan(K.scn.bars, K.scn.decisionIndex, K.scn.correct);
+    K.pos.closed = false;
+    K.markers = [{ idx: K.scn.decisionIndex, price: K.pos.entry, side: K.scn.correct, kind: 'entry' }];
+    el('k-pattern-text').textContent = K.scn.pattern;
+    el('k-pattern').hidden = false;
+    kDraw();
+    if (K.playing) K.hold = setTimeout(kAfterMark, 2400 / CFG.speed);
+  }
+  function kAfterMark() {
+    K.phase = 'play'; kDraw();
+    if (K.playing) K.timer = setInterval(kTickPlay, Math.max(60, 150 / CFG.speed));
+  }
+  function kTickPlay() {
+    var last = K.scn.bars.length - 1;
+    if (K.end >= last) { kEnterResult(null); return; }
+    K.end++;
+    var hit = hitCheck(K.pos, K.scn.bars[K.end]);
+    kDraw();
+    if (hit) kEnterResult(hit);
+  }
+  function kEnterResult(hit) {
+    kStop();
+    K.phase = 'result';
+    var exitPrice = hit ? hit.price : K.scn.bars[K.scn.bars.length - 1].c;
+    var r = rOf(K.pos, exitPrice);
+    K.pos.closed = true;
+    K.result = { r: r, why: hit ? hit.why : 'fim do gráfico' };
+    K.markers.push({ idx: K.end, price: exitPrice, kind: 'exit' });
+    K.done[K.i] = true;
+    kDraw(); kSync();
+    var extra = r >= 0
+      ? '<p>Guarde o formato: é esse desenho que você quer reconhecer antes do candle fechar.</p>'
+      : '<p>Mesmo o setup certo perde às vezes — por isso o stop entra junto com a ordem. Um exemplo perdedor não invalida a leitura.</p>';
+    el('k-fb').innerHTML =
+      '<div class="fb ' + (r >= 0 ? 'ok' : 'no') + '"><div class="fb-head">' +
+      '<span>Exemplo ' + (K.i + 1) + ' — saída no ' + esc(K.result.why) + '</span>' +
+      '<span class="result-chip ' + (r >= 0 ? 'up' : 'down') + '">' + fmtR(r) + '</span></div>' +
+      '<div class="fb-body"><p>' + esc(K.scn.explain) + '</p>' + extra +
+      '<p class="fb-tip"><strong>Como operar:</strong> ' + esc(K.scn.tip) + '</p></div></div>';
+    if (K.playing) K.hold = setTimeout(kNext, 2600 / CFG.speed);
+  }
+  function kNext() {
+    if (K.i >= K.list.length - 1) { kFinish(); return; }
+    var wasPlaying = K.playing;
+    kLoad(K.i + 1);
+    K.playing = wasPlaying;
+    if (wasPlaying) kResume();
+  }
+  function kPrev() {
+    var wasPlaying = K.playing;
+    kLoad(Math.max(0, K.i - 1));
+    K.playing = wasPlaying;
+    if (wasPlaying) kResume();
+  }
+  function kFinish() {
+    kPause();
+    el('k-fb').innerHTML =
+      '<div class="fb neutral"><div class="fb-head"><span>Série concluída — 30 exemplos</span></div>' +
+      '<div class="fb-body"><p class="caf-done">Você viu dez compras, dez vendas e dez saídas de consolidação em M1, M5, M15, H1 e H4.</p>' +
+      '<p class="fb-tip"><strong>Próximo passo:</strong> vá para o Treino ou o Desafio e tente achar esses mesmos formatos sem a marcação na tela. Reconhecer é fácil; decidir no escuro é o que dá dinheiro.</p></div></div>' +
+      '<button class="next-btn" id="k-again" type="button">Rodar a série de novo</button>';
+    el('k-again').onclick = function () { K.done = {}; kLoad(0); kPlay(); };
+  }
+
+  /* ===================== GRÁFICOS AO VIVO (TRADINGVIEW) ===================== */
+
+  var LIVE = {
+    n: 1, emas: true, built: false,
+    slots: [
+      { symbol: 'OANDA:XAUUSD', interval: '5' },
+      { symbol: 'BINANCE:BTCUSDT', interval: '15' },
+      { symbol: 'OANDA:EURUSD', interval: '60' }
+    ]
+  };
+  var TV_INTERVALS = [['1', 'M1'], ['5', 'M5'], ['15', 'M15'], ['30', 'M30'], ['60', 'H1'], ['240', 'H4'], ['D', 'Diário'], ['W', 'Semanal']];
+  var tvState = 'idle', tvWaiters = [];
+
+  function intLabel(v) {
+    for (var i = 0; i < TV_INTERVALS.length; i++) if (TV_INTERVALS[i][0] === v) return TV_INTERVALS[i][1];
+    return v;
+  }
+  function tvLoad(cb) {
+    if (window.TradingView && window.TradingView.widget) { tvState = 'ready'; cb(true); return; }
+    if (tvState === 'fail') { cb(false); return; }
+    if (tvState === 'loading') { tvWaiters.push(cb); return; }
+    tvState = 'loading'; tvWaiters = [cb];
+    var done = false;
+    function finish(ok) {
+      if (done) return; done = true;
+      tvState = ok ? 'ready' : 'fail';
+      var list = tvWaiters; tvWaiters = [];
+      list.forEach(function (f) { f(ok); });
+    }
+    var s = document.createElement('script');
+    s.src = 'https://s3.tradingview.com/tv.js';
+    s.async = true;
+    s.onload = function () { finish(!!(window.TradingView && window.TradingView.widget)); };
+    s.onerror = function () { finish(false); };
+    document.head.appendChild(s);
+    setTimeout(function () { finish(!!(window.TradingView && window.TradingView.widget)); }, 9000);
+  }
+  function liveSave() {
+    try { localStorage.setItem('cafeinado.live', JSON.stringify({ n: LIVE.n, slots: LIVE.slots, emas: LIVE.emas })); } catch (e) {}
+    saveState();
+  }
+  function liveRestore() {
+    try {
+      var raw = localStorage.getItem('cafeinado.live');
+      if (!raw) return;
+      var d = JSON.parse(raw);
+      if (d && d.slots && d.slots.length === 3) {
+        LIVE.n = clamp(d.n || 1, 1, 3); LIVE.slots = d.slots; LIVE.emas = d.emas !== false;
+      }
+    } catch (e) {}
+  }
+  function liveCfg() {
+    var html = '', i;
+    for (i = 0; i < LIVE.n; i++) {
+      var sl = LIVE.slots[i];
+      html += '<div class="field"><label for="sym' + i + '">Gráfico ' + (i + 1) + '</label>' +
+        '<input id="sym' + i + '" list="sym-list" spellcheck="false" autocomplete="off" value="' + esc(sl.symbol) + '"></div>' +
+        '<div class="field"><label for="int' + i + '">Tempo</label><select id="int' + i + '">' +
+        TV_INTERVALS.map(function (t) {
+          return '<option value="' + t[0] + '"' + (sl.interval === t[0] ? ' selected' : '') + '>' + t[1] + '</option>';
+        }).join('') + '</select></div>';
+    }
+    html += '<label class="chk" for="live-emas"><input type="checkbox" id="live-emas"' + (LIVE.emas ? ' checked' : '') + '> Médias 9 e 21</label>';
+    html += '<button class="apply-btn" id="live-apply" type="button">Aplicar</button>';
+    el('live-cfg').innerHTML = html;
+
+    el('live-apply').onclick = liveApply;
+    for (i = 0; i < LIVE.n; i++) {
+      (function (k) {
+        el('sym' + k).addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); liveApply(); } });
+        el('int' + k).addEventListener('change', liveApply);
+      })(i);
+    }
+  }
+  function liveApply() {
+    for (var i = 0; i < LIVE.n; i++) {
+      var v = (el('sym' + i).value || '').trim().toUpperCase();
+      if (v) LIVE.slots[i].symbol = v;
+      LIVE.slots[i].interval = el('int' + i).value;
+    }
+    LIVE.emas = el('live-emas').checked;
+    liveSave(); liveRender();
+  }
+  function tvWidget(i) {
+    var c = LIVE.slots[i];
+    var studies = LIVE.emas
+      ? [{ id: 'MAExp@tv-basicstudies', inputs: { length: 9 } }, { id: 'MAExp@tv-basicstudies', inputs: { length: 21 } }]
+      : [];
+    try {
+      new window.TradingView.widget({
+        container_id: 'tvbox' + i,
+        autosize: true,
+        symbol: c.symbol,
+        interval: c.interval,
+        timezone: 'America/Sao_Paulo',
+        theme: 'dark',
+        style: '1',
+        locale: 'br',
+        toolbar_bg: '#111823',
+        enable_publishing: false,
+        allow_symbol_change: true,
+        hide_side_toolbar: false,
+        withdateranges: true,
+        save_image: false,
+        studies: studies,
+        backgroundColor: '#0d131c',
+        gridColor: 'rgba(34,44,58,0.55)'
+      });
+    } catch (e) { liveFallback(); }
+  }
+  function liveFallback() {
+    for (var i = 0; i < LIVE.n; i++) {
+      var box = el('tvbox' + i);
+      if (!box) continue;
+      box.style.height = 'auto';
+      box.innerHTML = '<div class="tv-fallback">' +
+        '<p><strong>O gráfico do TradingView não carregou aqui.</strong></p>' +
+        '<p>Ou você está sem internet, ou a página está na pré-visualização do Claude, que bloqueia scripts de fora. No <code>index.html</code> hospedado no GitHub Pages — ou aberto direto no navegador, com internet — ele carrega normalmente.</p>' +
+        '<p><a href="https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(LIVE.slots[i].symbol) + '" target="_blank" rel="noopener">Abrir ' + esc(LIVE.slots[i].symbol) + ' no TradingView</a></p>' +
+        (i === 0 ? '<p><button class="apply-btn" id="live-retry" type="button">Tentar de novo</button></p>' : '') +
+        '</div>';
+    }
+    var rt = el('live-retry');
+    if (rt) rt.onclick = function () { tvState = 'idle'; liveRender(); };
+  }
+  function liveRender() {
+    var grid = el('live-grid');
+    grid.className = 'live-grid n' + LIVE.n;
+    var html = '', i;
+    for (i = 0; i < LIVE.n; i++) {
+      var sl = LIVE.slots[i];
+      html += '<div class="live-slot"><div class="live-slot-head">' +
+        '<span class="sym">' + esc(sl.symbol) + '</span>' +
+        '<span class="chip tf">' + esc(intLabel(sl.interval)) + '</span>' +
+        '<div class="head-right"><a class="mini-btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(sl.symbol) + '">Abrir no TradingView</a></div>' +
+        '</div><div class="tv-box" id="tvbox' + i + '"></div></div>';
+    }
+    grid.innerHTML = html;
+    document.querySelectorAll('#live-tabs .tab').forEach(function (t) {
+      t.className = 'tab' + (parseInt(t.getAttribute('data-n'), 10) === LIVE.n ? ' sel' : '');
+    });
+    tvLoad(function (ok) {
+      if (!ok) { liveFallback(); return; }
+      for (var k = 0; k < LIVE.n; k++) tvWidget(k);
+    });
+  }
+  function liveOpen() {
+    if (!LIVE.built) { liveRestore(); LIVE.built = true; }
+    liveCfg(); liveRender();
+  }
+
+  /* ===================== cabeçalhos e estatísticas ===================== */
+
+  function refreshStats() {
+    el('s-pct').textContent = STATS.rounds ? Math.round(STATS.score / STATS.rounds * 100) + '%' : '—';
+    el('s-frac').textContent = STATS.score + '/' + STATS.rounds;
+    el('s-streak').textContent = STATS.streak;
+    el('s-best').textContent = 'melhor: ' + STATS.best;
+  }
+  function syncHeads() {
+    var tf = TF[CFG.tf].label, lv = LV[CFG.level];
+    el('t-chip-tf').textContent = tf; el('c-chip-tf').textContent = tf; el('r-chip-tf').textContent = tf;
+    el('t-chip-mode').textContent = MODES[CFG.mode].label;
+    el('c-chip-style').textContent = STYLES[CFG.style].label;
+    el('t-chip-level').textContent = lv.label; el('t-chip-level').className = 'chip ' + lv.cls;
+    el('c-chip-level').textContent = lv.label; el('c-chip-level').className = 'chip ' + lv.cls;
+    el('t-live-flag').hidden = !CFG.live;
+    el('t-pause').hidden = !CFG.live; el('t-speed').hidden = !CFG.live;
+    var sp = String(CFG.speed).replace('.', ',') + '×';
+    el('t-speed').textContent = sp; el('c-speed').textContent = sp;
+    el('r-speed').textContent = sp; el('k-speed').textContent = sp;
+    el('t-live').textContent = CFG.live ? 'Voltar ao estático' : 'Ligar tempo real';
+    el('t-live').className = 'mini-btn' + (CFG.live ? ' on' : '');
+    el('t-wait-label').textContent = CFG.live ? 'Passar' : 'Esperar';
+    el('t-zoom-lbl').textContent = CFG.zoom; el('c-zoom-lbl').textContent = CFG.zoom;
+    el('r-zoom-lbl').textContent = CFG.zoom; el('k-zoom-lbl').textContent = CFG.zoom;
+    el('m-style').textContent = STYLES[CFG.style].label;
+    el('m-mode').textContent = MODES[CFG.mode].label;
+    el('m-tf').textContent = tf; el('m-level').textContent = lv.label;
+    el('m-chart').textContent = CFG.live ? 'Tempo real ' + sp : 'Estático';
+    el('t-hint').textContent = CFG.live
+      ? 'Tempo real: o gatilho só vale depois que o candle de confirmação fecha. Não clicar é o mesmo que deixar passar.'
+      : 'O gráfico está parado no candle atual. Decida com o que está fechado na tela — o resto do movimento aparece depois da sua resposta.';
+    el('look-list').innerHTML = MODE_HINTS[CFG.mode].map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('');
+  }
+
+  function setZoom(delta) {
+    var steps = [16, 22, 30, 38, 46, 60, 78, 100, 130];
+    var i = 0, bestD = 1e9;
+    steps.forEach(function (s, k) { var d = Math.abs(s - CFG.zoom); if (d < bestD) { bestD = d; i = k; } });
+    CFG.zoom = steps[clamp(i + delta, 0, steps.length - 1)];
+    T.scale = {}; C.scale = {}; R.scale = {}; K.scale = {};
+    syncHeads();
+    if (activeView() === 'caf') { kDraw(); kSync(); }
+    else { tDraw(); cDraw(); if (R.bars.length) rDraw(); }
+    saveState();
+  }
+  function panBy(n) {
+    var cur = activeView();
+    if (cur === 'train' && T.scn) { T.offset = clamp(T.offset + n, 0, Math.max(0, T.end - 10)); tDraw(); }
+    else if (cur === 'chal' && C.scn) { C.offset = clamp(C.offset + n, 0, Math.max(0, C.end - 10)); cDraw(); }
+    else if (cur === 'replay' && R.bars.length) { R.offset = clamp(R.offset + n, 0, Math.max(0, R.idx - 10)); rDraw(); }
+  }
+
+  /* ===================== navegação e ajustes ===================== */
+
+  var VIEWS = ['train', 'caf', 'chal', 'replay', 'live', 'setup', 'tips', 'report'];
+  function activeView() {
+    for (var i = 0; i < VIEWS.length; i++) if (!el('view-' + VIEWS[i]).hidden) return VIEWS[i];
+    return 'train';
+  }
+  function showView(name) {
+    VIEWS.forEach(function (v) {
+      el('view-' + v).hidden = (v !== name);
+      el('nav-' + v).className = (v === name) ? 'active' : '';
+    });
+    if (name !== 'train' && T.timer) tPauseLive();
+    if (name !== 'replay' && R.timer) rClear();
+    if (name !== 'chal' && C.timer) cClear();
+    if (name !== 'caf') { kPause(); TF_OVERRIDE = null; }
+    if (name === 'caf' && !K.scn) kLoad(0);
+    if (name === 'chal' && !C.scn) cNewRound();
+    if (name === 'replay' && !R.bars.length) rNewMarket();
+    if (name === 'live') liveOpen();
+    if (name === 'report') renderReport();
+    saveState();
+  }
+
+  function buildSetupView() {
+    var st = STYLES[CFG.style];
+    if (st.tfs.indexOf(CFG.tf) === -1) CFG.tf = st.defaultTf;
+
+    el('style-row').innerHTML = Object.keys(STYLES).map(function (k) {
+      return '<button type="button" class="opt' + (CFG.style === k ? ' sel' : '') + '" data-st="' + k + '">' + STYLES[k].label + '</button>';
+    }).join('');
+    el('style-row').querySelectorAll('.opt').forEach(function (b) {
+      b.onclick = function () { CFG.style = b.getAttribute('data-st'); CFG.tf = STYLES[CFG.style].defaultTf; buildSetupView(); syncHeads(); };
+    });
+
+    var mg = el('mode-grid');
+    mg.innerHTML = Object.keys(MODES).map(function (k) {
+      return '<button type="button" class="mode-card' + (CFG.mode === k ? ' sel' : '') + '" data-mode="' + k + '"><b>' + esc(MODES[k].label) + '</b><span>' + esc(MODES[k].desc) + '</span></button>';
+    }).join('');
+    mg.querySelectorAll('.mode-card').forEach(function (b) {
+      b.onclick = function () { CFG.mode = b.getAttribute('data-mode'); buildSetupView(); syncHeads(); };
+    });
+
+    el('tf-row').innerHTML = st.tfs.map(function (k) {
+      return '<button type="button" class="opt' + (CFG.tf === k ? ' sel' : '') + '" data-tf="' + k + '">' + TF[k].label + '</button>';
+    }).join('');
+    el('tf-row').querySelectorAll('.opt').forEach(function (b) {
+      b.onclick = function () { CFG.tf = b.getAttribute('data-tf'); buildSetupView(); syncHeads(); };
+    });
+
+    el('level-row').innerHTML = Object.keys(LV).map(function (k) {
+      return '<button type="button" class="opt' + (CFG.level === k ? ' sel' : '') + '" data-lv="' + k + '">' + LV[k].label + '</button>';
+    }).join('');
+    el('level-row').querySelectorAll('.opt').forEach(function (b) {
+      b.onclick = function () { CFG.level = b.getAttribute('data-lv'); buildSetupView(); syncHeads(); };
+    });
+
+    el('chart-row').innerHTML =
+      '<button type="button" class="opt' + (!CFG.live ? ' sel' : '') + '" data-live="0">Estático</button>' +
+      '<button type="button" class="opt' + (CFG.live ? ' sel' : '') + '" data-live="1">Rodando (tempo real)</button>';
+    el('chart-row').querySelectorAll('.opt').forEach(function (b) {
+      b.onclick = function () { CFG.live = b.getAttribute('data-live') === '1'; buildSetupView(); syncHeads(); };
+    });
+
+    el('speed-group').hidden = false;
+    el('speed-row').innerHTML = [0.5, 1, 2, 3].map(function (v) {
+      return '<button type="button" class="opt' + (CFG.speed === v ? ' sel' : '') + '" data-sp="' + v + '">' + String(v).replace('.', ',') + '×</button>';
+    }).join('');
+    el('speed-row').querySelectorAll('.opt').forEach(function (b) {
+      b.onclick = function () { CFG.speed = parseFloat(b.getAttribute('data-sp')); buildSetupView(); syncHeads(); };
+    });
+  }
+
+  /* ===================== relatório ===================== */
+
+  var FAM_ADVICE = {
+    pullback: 'Nos pullbacks, o erro quase sempre é entrar no meio da correção. Volte ao treino de pullback no nível fácil e só clique quando o candle fechar além do último candle do recuo.',
+    rompimento: 'Nos rompimentos, o que derruba a maioria é o fakeout. Antes de clicar: o corpo fechou fora da borda? Se o fechamento voltou pra dentro, é armadilha.',
+    nivel: 'Nos níveis, você está entrando no toque em vez da reação. Tocar não é sinal — o sinal é o candle de corpo grande saindo do nível.',
+    exaustao: 'Na exaustão, pavio não é reversão. Espere o candle fechar contra a tendência antes de operar contra o movimento.',
+    impulso: 'Você está perseguindo movimento esticado. Quando sentir que "está indo sem você", marque o nível e espere o recuo.',
+    range: 'Você está operando dentro de range. Marque as bordas e só volte a clicar quando uma delas for rompida com fechamento.'
+  };
+  function weakestFam() {
+    var worst = null, wr = 2;
+    Object.keys(STATS.fams).forEach(function (k) {
+      var f = STATS.fams[k];
+      if (f.t < 2) return;
+      var r = f.c / f.t;
+      if (r < wr) { wr = r; worst = k; }
+    });
+    return worst;
+  }
+  function tile(label, value, cls) {
+    return '<div class="report-tile"><div class="stat-label">' + label + '</div><div class="stat-value ' + (cls || '') + '">' + value + '</div></div>';
+  }
+  function bdRow(label, w, frac, color) {
+    return '<div class="bd-row"><span class="bd-label">' + esc(label) + '</span>' +
+      '<div class="bd-track"><div class="bd-fill" style="width:0%;background:' + color + '" data-w="' + w.toFixed(0) + '"></div></div>' +
+      '<span class="bd-frac">' + frac + '</span></div>';
+  }
+  function renderReport() {
+    var pct = STATS.rounds ? Math.round(STATS.score / STATS.rounds * 100) : 0;
+    var catRows = [
+      { k: 'buy', label: 'Compra', color: 'var(--bull)' },
+      { k: 'sell', label: 'Venda', color: 'var(--bear)' },
+      { k: 'wait', label: 'Espera', color: 'var(--gold-light)' }
+    ].map(function (r) {
+      var c = STATS.cats[r.k], w = c.t ? (c.c / c.t) * 100 : 0;
+      return bdRow(r.label, w, c.c + '/' + c.t, r.color);
+    }).join('');
+    var famRows = Object.keys(FAMS).map(function (k) {
+      var f = STATS.fams[k], w = f.t ? (f.c / f.t) * 100 : 0;
+      return bdRow(FAMS[k], w, f.c + '/' + f.t, f.t ? 'var(--steel)' : 'var(--border)');
+    }).join('');
+    var worst = weakestFam();
+    var advice = STATS.rounds < 5
+      ? 'Faça algumas rodadas a mais para o relatório apontar onde está o seu ponto fraco.'
+      : (worst ? FAM_ADVICE[worst] : 'Desempenho parelho em todos os setups. Suba o nível, ligue o tempo real ou vá para o desafio.');
+    var totR = CHAL.totalR + RSTATS.totalR, totTrades = CHAL.trades + RSTATS.trades, totWins = CHAL.wins + RSTATS.wins;
+
+    el('report-body').innerHTML =
+      '<div class="card card-pad">' +
+        '<p class="rail-title">Treino de leitura</p>' +
+        '<div class="report-grid">' + tile('Aproveitamento', pct + '%') + tile('Rodadas', STATS.rounds) + tile('Acertos', STATS.score) + tile('Melhor sequência', STATS.best) + '</div>' +
+        '<p class="rail-title">Por decisão correta</p><div class="breakdown">' + catRows + '</div>' +
+        '<p class="rail-title section-gap">Por tipo de setup</p><div class="breakdown">' + famRows + '</div>' +
+        '<p class="fb-tip section-gap"><strong>Onde focar:</strong> ' + esc(advice) + '</p>' +
+      '</div>' +
+      '<div class="card card-pad section-gap">' +
+        '<p class="rail-title">Operações (desafio + replay)</p>' +
+        '<div class="report-grid">' +
+          tile('R acumulado', fmtR(totR), totR > 0 ? 'up' : (totR < 0 ? 'down' : '')) +
+          tile('Operações', totTrades) +
+          tile('Acerto', totTrades ? Math.round(totWins / totTrades * 100) + '%' : '—') +
+          tile('Passadas certas', CHAL.goodSkips + '/' + CHAL.skipped) +
+        '</div>' +
+        '<p class="hint" style="margin-top:4px">R é o múltiplo do risco: perder o stop custa 1R, bater o alvo rende ' + rr() + 'R. Ganhar dinheiro no longo prazo é manter esse número positivo, não acertar todas.</p>' +
+        '<button class="ghost-btn" id="btn-reset" type="button">Zerar todas as estatísticas</button>' +
+      '</div>';
+
+    el('report-body').querySelectorAll('.bd-fill').forEach(function (b) {
+      requestAnimationFrame(function () { b.style.width = b.getAttribute('data-w') + '%'; });
+    });
+    el('btn-reset').onclick = function () {
+      STATS.rounds = 0; STATS.score = 0; STATS.streak = 0; STATS.best = 0;
+      STATS.cats = { buy: { c: 0, t: 0 }, sell: { c: 0, t: 0 }, wait: { c: 0, t: 0 } };
+      Object.keys(FAMS).forEach(function (k) { STATS.fams[k] = { c: 0, t: 0 }; });
+      CHAL = { trades: 0, wins: 0, totalR: 0, skipped: 0, goodSkips: 0, log: [] };
+      RSTATS = { trades: 0, wins: 0, totalR: 0, log: [] };
+      refreshStats(); cRefresh(); rRefresh(); renderReport(); saveState();
+    };
+  }
+
+  /* ===================== dicas ===================== */
+
+  var TIPS = [
+    { kicker: 'Método', title: 'A leitura em 4 passos', body:
+      '<ol class="tip-steps">' +
+      '<li><strong>Contexto:</strong> o mercado está em tendência (topos e fundos progredindo) ou em range? Isso já elimina metade dos setups.</li>' +
+      '<li><strong>Localização:</strong> o preço está num lugar que importa — nível, borda de range, média — ou no meio do nada?</li>' +
+      '<li><strong>Gatilho:</strong> existe um candle FECHADO confirmando a reação? Sem ele, não há entrada.</li>' +
+      '<li><strong>Risco:</strong> onde fica o stop e quanto vale o alvo? Se o alvo não paga pelo menos 2× o risco, o setup não serve.</li>' +
+      '</ol>' },
+    { kicker: 'Pullback', title: 'Recuo em tendência', body:
+      '<p>Só existe pullback dentro de tendência. Confirme que os topos e fundos estão progredindo na mesma direção antes de qualquer coisa.</p>' +
+      '<p>O recuo bom é <strong>mais lento que o impulso</strong>: candles menores, sobrepostos, sem força. Recuo rápido e violento normalmente é reversão, não correção.</p>' +
+      '<p>O gatilho é o candle que <strong>fecha além da máxima do último candle da correção</strong> (ou abaixo da mínima, se for venda). Stop atrás do fundo do recuo.</p>' },
+    { kicker: 'Rompimento', title: 'Saída de consolidação', body:
+      '<p>Range que serve tem borda clara e pelo menos 8 a 10 candles. Quanto mais apertado e mais longo, mais forte o movimento quando sair.</p>' +
+      '<p>Rompimento válido = <strong>corpo grande fechando fora da borda</strong>. Furo no pavio com fechamento de volta pra dentro é fakeout — e fakeout costuma virar movimento forte no sentido contrário.</p>' +
+      '<p>Entrada mais barata: espere o <strong>reteste</strong> da borda rompida virando apoio.</p>' },
+    { kicker: 'Níveis', title: 'Suporte e resistência', body:
+      '<p>Nível é <strong>zona, não linha</strong>. O preço pode furar alguns pontos e ainda assim respeitar a região.</p>' +
+      '<p>Tocar não é sinal. O sinal é o <strong>candle de reação</strong>: pavio longo rejeitando o nível e fechamento de corpo forte na direção contrária.</p>' +
+      '<p>Quanto mais vezes o nível é testado em pouco tempo, mais fraco ele fica. Terceiro ou quarto toque seguido costuma romper.</p>' },
+    { kicker: 'Reversão', title: 'Exaustão de movimento', body:
+      '<p>Dois ingredientes obrigatórios: movimento <strong>esticado sem correção</strong> e um <strong>candle de reversão fechado</strong> engolindo o corpo anterior.</p>' +
+      '<p>Pavio de rejeição sozinho não basta — se o corpo ainda fechou a favor da tendência, o movimento continua mandando.</p>' +
+      '<p>É o trade de menor probabilidade da lista. Reduza o tamanho, realize parcial cedo e aceite estar errado rápido.</p>' },
+    { kicker: 'Swing trade', title: 'O que muda no gráfico maior', body:
+      '<p>No swing você opera H4, diário ou semanal: a leitura é a mesma, mas cada candle vale um dia ou uma semana. O trade demora <strong>dezenas de candles</strong> para se resolver — por isso o desafio faz o gráfico andar até o fim.</p>' +
+      '<p>Stop maior, alvo maior: aqui faz sentido buscar 3R ou mais. Em compensação você não precisa acertar o ponto exato, e o ruído intradiário deixa de existir.</p>' +
+      '<p>O erro típico do swing é <strong>mexer no stop no meio do caminho</strong>. Se você definiu a estrutura na entrada, deixe o trade respirar até o alvo ou o stop.</p>' },
+    { kicker: 'Cafeinado', title: 'Para que serve o modo guiado', body:
+      '<p>O Cafeinado é o único modo em que o simulador <strong>mostra a resposta</strong>: trinta entradas — dez compras, dez vendas e dez saídas de consolidação — marcadas na tela enquanto o gráfico roda, em M1, M5, M15, H1 e H4.</p>' +
+      '<p>Serve para uma coisa específica: <strong>fixar o formato visual</strong> de cada setup em vários tempos gráficos. O mesmo recuo tem outra cara em M1 e em H4, e é isso que confunde quem troca de timeframe.</p>' +
+      '<p>Rode a série inteira uma vez prestando atenção no candle exato onde a marcação aparece. Depois vá para o Treino sem marcação nenhuma — a diferença entre o que você reconhece marcado e o que reconhece sozinho é o tamanho do seu treino que falta.</p>' },
+    { kicker: 'Replay', title: 'Como treinar no replay de mercado', body:
+      '<p>O replay é o treino mais parecido com operar de verdade: o gráfico anda candle a candle e você decide sem saber o que vem depois.</p>' +
+      '<p>Rotina que funciona: rode <strong>uma sessão inteira sem operar</strong>, marcando mentalmente onde entraria. Depois rode de novo operando. A diferença entre as duas leituras é o seu ponto cego.</p>' +
+      '<p>Use o passo a passo (um candle por vez) nos momentos de decisão e a velocidade alta nas partes sem setup. O número que importa no fim é o <strong>R acumulado</strong>, não quantos trades você acertou.</p>' },
+    { kicker: 'Disciplina', title: 'Quando NÃO operar', body:
+      '<p>Mercado lateral estreito e ruidoso. Minutos ao redor de notícia relevante. Quando você não consegue dizer em voz alta onde fica o stop.</p>' +
+      '<p>Depois de duas perdas seguidas: pare o dia. A terceira entrada depois de duas perdas é quase sempre revanche, não análise.</p>' +
+      '<p>E o mais caro de todos: entrar porque <strong>"está andando sem mim"</strong>.</p>' },
+    { kicker: 'Risco', title: 'Gestão antes da entrada', body:
+      '<p>Defina um risco fixo pequeno por operação (muita gente usa 1% da banca). O tamanho da posição sai da distância do stop, nunca do seu otimismo.</p>' +
+      '<p>Stop sempre <strong>atrás da estrutura</strong> — fundo do recuo, outro lado do nível, meio do range — e não num número redondo qualquer.</p>' +
+      '<p>Em M1 o custo por operação pesa muito: alvo curto demais não paga corretagem e spread. Se o movimento esperado é menor que 2× o risco, não é trade.</p>' },
+    { kicker: 'Checklist', title: 'Cinco perguntas antes de clicar', body:
+      '<ol class="tip-steps">' +
+      '<li>Qual é a tendência do gráfico agora?</li>' +
+      '<li>O preço está num lugar que importa?</li>' +
+      '<li>O candle de gatilho já <strong>fechou</strong>?</li>' +
+      '<li>Onde exatamente fica o stop?</li>' +
+      '<li>O alvo paga pelo menos 2× esse risco?</li>' +
+      '</ol><p>Se qualquer resposta for "mais ou menos", a resposta da rodada é esperar.</p>' }
+  ];
+  function buildTips() {
+    el('tips-grid').innerHTML = TIPS.map(function (t) {
+      return '<article class="tip-card"><p class="tip-kicker">' + esc(t.kicker) + '</p><h3>' + esc(t.title) + '</h3>' + t.body + '</article>';
+    }).join('');
+  }
+
+  /* ===================== estado ===================== */
+
+  function saveState() {
+    try {
+      if (window.claude && window.claude.hot && window.claude.hot.snapshot) {
+        window.claude.hot.snapshot({
+          cfg: CFG, stats: STATS, chal: CHAL, rstats: RSTATS, view: activeView(),
+          live: { n: LIVE.n, slots: LIVE.slots, emas: LIVE.emas }
+        });
+      }
+    } catch (e) {}
+  }
+
+  /* ===================== eventos ===================== */
+
+  el('t-buy').onclick = function () { tAnswer('buy'); };
+  el('t-sell').onclick = function () { tAnswer('sell'); };
+  el('t-wait').onclick = function () { tAnswer('wait'); };
+  el('t-pause').onclick = tTogglePause;
+  el('t-live').onclick = function () { CFG.live = !CFG.live; buildSetupView(); syncHeads(); tNewRound(); };
+  el('t-zoom-in').onclick = function () { setZoom(-1); };
+  el('t-zoom-out').onclick = function () { setZoom(1); };
+  el('c-zoom-in').onclick = function () { setZoom(-1); };
+  el('c-zoom-out').onclick = function () { setZoom(1); };
+  el('r-zoom-in').onclick = function () { setZoom(-1); };
+  el('r-zoom-out').onclick = function () { setZoom(1); };
+
+  function cycleSpeed() {
+    var opts = [0.5, 1, 2, 3];
+    CFG.speed = opts[(opts.indexOf(CFG.speed) + 1) % opts.length];
+    syncHeads(); buildSetupView();
+    if (CFG.live && T.playing) { tPauseLive(); tStartLive(); }
+    if (R.playing) { rClear(); rPlay(); }
+    saveState();
+  }
+  el('t-speed').onclick = cycleSpeed;
+  el('c-speed').onclick = cycleSpeed;
+  el('r-speed').onclick = cycleSpeed;
+  el('k-speed').onclick = function () { cycleSpeed(); if (K.playing) kResume(); };
+
+  el('k-play').onclick = kPlay;
+  el('k-next').onclick = kNext;
+  el('k-prev').onclick = kPrev;
+  el('k-zoom-in').onclick = function () { setZoom(-1); };
+  el('k-zoom-out').onclick = function () { setZoom(1); };
+  el('k-restart').onclick = function () { K.done = {}; kLoad(0); if (K.playing) kResume(); };
+  document.querySelectorAll('#view-caf .tab').forEach(function (t) {
+    t.onclick = function () {
+      var cat = t.getAttribute('data-cat');
+      var start = cat === 'buy' ? 0 : (cat === 'sell' ? 10 : 20);
+      var wasPlaying = K.playing;
+      kLoad(start); K.playing = wasPlaying; if (wasPlaying) kResume();
+    };
+  });
+  document.querySelectorAll('#live-tabs .tab').forEach(function (t) {
+    t.onclick = function () {
+      LIVE.n = parseInt(t.getAttribute('data-n'), 10) || 1;
+      liveSave(); liveCfg(); liveRender();
+    };
+  });
+
+  el('c-buy').onclick = function () { cDecide('buy'); };
+  el('c-sell').onclick = function () { cDecide('sell'); };
+  el('c-skip').onclick = function () { cDecide('wait'); };
+
+  el('r-play').onclick = rPlay;
+  el('r-step').onclick = rStep;
+  el('r-new').onclick = rNewMarket;
+  el('r-buy').onclick = function () { rOpen('buy'); };
+  el('r-sell').onclick = function () { rOpen('sell'); };
+  el('r-close').onclick = function () { if (R.pos) rCloseAt(R.bars[R.idx].c, 'manual'); };
+
+  el('btn-open-setup').onclick = function () { showView('setup'); };
+  VIEWS.forEach(function (v) { el('nav-' + v).onclick = function () { showView(v); }; });
+  el('btn-start').onclick = function () { showView('train'); syncHeads(); tNewRound(); };
+  el('btn-start-chal').onclick = function () { showView('chal'); syncHeads(); cNewRound(); };
+
+  document.addEventListener('keydown', function (e) {
+    var v = activeView();
+    if (v !== 'train' && v !== 'chal' && v !== 'replay' && v !== 'caf') return;
+    var k = e.key.toLowerCase();
+    if (k === '+' || k === '=') { e.preventDefault(); setZoom(-1); return; }
+    if (k === '-' || k === '_') { e.preventDefault(); setZoom(1); return; }
+    if (v === 'caf') {
+      if (e.key === 'ArrowRight') { e.preventDefault(); kNext(); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); kPrev(); }
+      else if (e.code === 'Space') { e.preventDefault(); kPlay(); }
+      return;
+    }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); panBy(5); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); if (v === 'replay') rStep(); else panBy(-5); return; }
+    if (v === 'train') {
+      if (k === 'c') tAnswer('buy');
+      else if (k === 'v') tAnswer('sell');
+      else if (k === 'e') tAnswer('wait');
+      else if (k === 'n') { if (T.answered) tNewRound(); }
+      else if (e.code === 'Space') { e.preventDefault(); tTogglePause(); }
+    } else if (v === 'chal') {
+      if (k === 'c') cDecide('buy');
+      else if (k === 'v') cDecide('sell');
+      else if (k === 'e') cDecide('wait');
+      else if (k === 'n') { if (C.done) cNewRound(); }
+    } else if (v === 'replay') {
+      if (k === 'c') rOpen('buy');
+      else if (k === 'v') rOpen('sell');
+      else if (k === 'f') { if (R.pos) rCloseAt(R.bars[R.idx].c, 'manual'); }
+      else if (e.code === 'Space') { e.preventDefault(); rPlay(); }
+    }
+  });
+
+  var resizeTimer = null;
+  window.addEventListener('resize', function () {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      T.scale = {}; C.scale = {}; R.scale = {}; K.scale = {};
+      var v = activeView();
+      if (v === 'caf') kDraw();
+      else { tDraw(); cDraw(); if (R.bars.length) rDraw(); }
+    }, 200);
+  });
+
+  /* ===================== boot ===================== */
+
+  function boot(data) {
+    if (data && data.cfg) {
+      CFG = data.cfg;
+      if (CFG.zoom == null) CFG.zoom = 46;
+      if (data.stats) STATS = data.stats;
+      if (data.chal) CHAL = data.chal;
+      if (data.rstats) RSTATS = data.rstats;
+      if (data.live && data.live.slots && data.live.slots.length === 3) {
+        LIVE.n = clamp(data.live.n || 1, 1, 3); LIVE.slots = data.live.slots; LIVE.emas = data.live.emas !== false;
+        LIVE.built = true;
+      }
+    }
+    if (isNarrow() && CFG.zoom > 38) CFG.zoom = 30;
+    buildTips(); buildSetupView(); syncHeads(); refreshStats(); cRefresh(); rRefresh();
+    tNewRound();
+    if (data && data.view && data.view !== 'train') showView(data.view);
+  }
+
+  if (window.claude && window.claude.hot && window.claude.hot.ready) window.claude.hot.ready(boot);
+  else boot(window.claude && window.claude.hot ? window.claude.hot.data : null);
+})();
+</script>
+</body>
+</html>
