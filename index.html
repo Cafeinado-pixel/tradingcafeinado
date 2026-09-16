@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Simulador de treino de leitura de candles com gráficos ao vivo do TradingView: modo guiado Cafeinado, treino de entrada, desafio em R e replay de mercado.">
+<meta name="description" content="Simulador de leitura de candles: Cafeinado com 75 entradas explicadas passo a passo, treino, desafio em R, replay de mercado e graficos ao vivo do TradingView.">
 <meta name="theme-color" content="#080b10">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
 <style>
@@ -283,6 +283,17 @@
   .tv-fallback { padding: 22px; text-align: center; }
   .tv-fallback p { font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0 auto 10px; max-width: 54ch; }
   .tv-fallback a { color: var(--gold-light); }
+  .steps { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .step { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--muted-dim); transition: color 0.2s ease; }
+  .step-n {
+    width: 19px; height: 19px; border-radius: 50%; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: 10px; flex-shrink: 0;
+  }
+  .step.done { color: var(--muted); }
+  .step.done .step-n { border-color: var(--bull); color: var(--bull); }
+  .step.on { color: var(--text); font-weight: 600; }
+  .step.on .step-n { border-color: var(--gold); background: var(--gold-soft); color: var(--gold-light); }
   .caf-lead { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 0 0 10px; }
   .caf-lead strong { color: var(--text); }
   .caf-done { text-align: center; padding: 6px 0 2px; }
@@ -399,10 +410,18 @@
 
   <!-- ============ CAFEINADO ============ -->
   <section id="view-caf" class="view" hidden>
-    <div class="tabs">
-      <button type="button" class="tab sel" data-cat="buy" id="tab-buy">Compras <span class="tab-count">1–10</span></button>
-      <button type="button" class="tab" data-cat="sell" id="tab-sell">Vendas <span class="tab-count">11–20</span></button>
-      <button type="button" class="tab" data-cat="brk" id="tab-brk">Saídas de consolidação <span class="tab-count">21–30</span></button>
+    <div class="tabs" id="caf-tabs">
+      <button type="button" class="tab sel" data-cat="buy" id="tab-buy">Compras <span class="tab-count">25</span></button>
+      <button type="button" class="tab" data-cat="sell" id="tab-sell">Vendas <span class="tab-count">25</span></button>
+      <button type="button" class="tab" data-cat="brk" id="tab-brk">Saídas de consolidação <span class="tab-count">25</span></button>
+    </div>
+    <div class="tabs" id="caf-tfs">
+      <button type="button" class="tab sel" data-tf="all">Todos os tempos</button>
+      <button type="button" class="tab" data-tf="M1">M1</button>
+      <button type="button" class="tab" data-tf="M5">M5</button>
+      <button type="button" class="tab" data-tf="M15">M15</button>
+      <button type="button" class="tab" data-tf="H1">H1</button>
+      <button type="button" class="tab" data-tf="H4">H4</button>
     </div>
     <div class="work">
       <div>
@@ -419,6 +438,7 @@
                 <span id="k-zoom-lbl">46</span>
                 <button type="button" id="k-zoom-in" aria-label="Aproximar">+</button>
               </div>
+              <button class="mini-btn on" id="k-stepmode" type="button">Passo a passo</button>
               <button class="mini-btn" id="k-prev" type="button">⏮ Anterior</button>
               <button class="mini-btn" id="k-play" type="button">▶ Rodar série</button>
               <button class="mini-btn" id="k-next" type="button">⏭ Próximo</button>
@@ -435,7 +455,7 @@
       <aside class="rail">
         <div class="card card-pad">
           <p class="rail-title">Cafeinado</p>
-          <p class="caf-lead">Trinta pontos de entrada, marcados na tela enquanto o gráfico roda. Você não decide nada aqui — só treina o olho para reconhecer o formato do setup antes do candle fechar.</p>
+          <p class="caf-lead">Setenta e cinco entradas destrinchadas em quatro passos — contexto, localização, gatilho e risco — enquanto o gráfico roda. Você não decide nada aqui: lê o porquê de cada entrada até a leitura virar automática.</p>
           <div class="meta-list">
             <div class="meta-row"><span>Exemplo</span><span id="k-meta-step">1 / 30</span></div>
             <div class="meta-row"><span>Timeframe</span><span id="k-meta-tf">M1</span></div>
@@ -449,9 +469,9 @@
         <div class="card card-pad">
           <p class="rail-title">Série</p>
           <div class="meta-list">
-            <div class="meta-row"><span>Compras vistas</span><span id="k-seen-buy">0 / 10</span></div>
-            <div class="meta-row"><span>Vendas vistas</span><span id="k-seen-sell">0 / 10</span></div>
-            <div class="meta-row"><span>Consolidações</span><span id="k-seen-brk">0 / 10</span></div>
+            <div class="meta-row"><span>Compras vistas</span><span id="k-seen-buy">0 / 25</span></div>
+            <div class="meta-row"><span>Vendas vistas</span><span id="k-seen-sell">0 / 25</span></div>
+            <div class="meta-row"><span>Consolidações</span><span id="k-seen-brk">0 / 25</span></div>
           </div>
           <button class="ghost-btn" id="k-restart" type="button">Recomeçar a série</button>
           <p class="hint" style="margin-top:8px">Modo demonstração: os resultados daqui não entram no relatório.</p>
@@ -628,7 +648,8 @@
       <option value="BMFBOVESPA:IBOV">Ibovespa</option>
     </datalist>
     <div class="live-grid n1" id="live-grid"></div>
-    <p class="hint" id="live-note">Digite qualquer código do TradingView no campo (com ou sem a corretora, por exemplo <code>OANDA:XAUUSD</code> ou só <code>XAUUSD</code>) e clique em Aplicar. Dá para trocar o ativo e o tempo gráfico dentro do próprio gráfico também.</p>
+    <p class="hint" id="live-note">Digite qualquer código do TradingView no campo (com ou sem a corretora, por exemplo <code>OANDA:XAUUSD</code> ou só <code>XAUUSD</code>) e clique em Aplicar.<br>
+    <strong>Suas marcações:</strong> trocar de aba (Gráfico 1, 2, 3) ou sair e voltar não apaga nada — os gráficos ficam vivos com as linhas onde você deixou. O que recarrega um gráfico e limpa os desenhos dele é usar o <em>Aplicar</em> com símbolo ou tempo diferente, ou mexer na caixa das médias. Para trocar de ativo ou de tempo sem perder as marcações, use os seletores de dentro do próprio gráfico do TradingView.</p>
   </section>
 
   <!-- ============ AJUSTES ============ -->
@@ -835,7 +856,9 @@
     var st = { price: rnd(85, 135) }, bars = [];
     var legs = Math.floor(rnd(7, 11)), pb = Math.floor(rnd(3, 6));
     pushContext(bars, st, padFor(legs + pb + 1), p);
+    var cf = bars.length;
     pushTrend(bars, st, legs, dir, p, rnd(0.55, 0.8));
+    var lf = bars.length;
     pushTrend(bars, st, pb, -dir, p, rnd(0.42, 0.6));
     var edge = dir > 0 ? lastHigh(bars, pb) : lastLow(bars, pb);
     pushBar(bars, st, (edge + dir * p.vol * rnd(0.35, 0.9)) - st.price, p, p.wick * 0.5);
@@ -843,6 +866,19 @@
     pushTrend(bars, st, ob(11), dir, p, rnd(0.5, 0.8));
     return {
       bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'pullback',
+      ctxFrom: cf, locFrom: lf,
+      ctx: dir > 0
+        ? 'Antes do recuo o preço fez uma sequência de topos e fundos ascendentes, com a média curta por cima da longa. É isso — e só isso — que autoriza pensar em compra: sem tendência, não existe pullback, existe queda.'
+        : 'Antes do repique o preço fez uma sequência de topos e fundos descendentes, com a média curta por baixo da longa. É isso que autoriza pensar em venda: sem tendência de baixa, não existe repique, existe recuperação.',
+      loc: dir > 0
+        ? 'O recuo veio com candles menores e sobrepostos, mais lento que o impulso que o gerou. Correção devolvendo pouco e devagar é quem está realizando lucro; correção rápida e violenta seria reversão.'
+        : 'O repique veio com candles menores e sobrepostos, mais lento que a queda que o gerou. Alívio devagar é recompra pequena; alívio rápido e forte seria reversão de verdade.',
+      gat: dir > 0
+        ? 'O candle atual fechou acima da máxima do último candle da correção. Esse fechamento é o comprador retomando o controle — antes dele não havia nada para operar, só um recuo em andamento.'
+        : 'O candle atual fechou abaixo da mínima do último candle da correção. Esse fechamento é o vendedor retomando o controle — antes dele só havia um repique em andamento.',
+      invalida: dir > 0
+        ? 'Se durante o recuo o preço tivesse feito um fundo abaixo do fundo anterior, a tendência estaria quebrada e o setup morreria ali.'
+        : 'Se durante o repique o preço tivesse feito um topo acima do topo anterior, a tendência estaria quebrada e o setup morreria ali.',
       pattern: dir > 0 ? 'Recuo em tendência de alta — retomada confirmada' : 'Repique em tendência de baixa — retomada confirmada',
       explain: dir > 0
         ? 'A tendência é de alta, o recuo foi mais lento que o impulso e o candle atual fechou acima da máxima da correção. É o gatilho do pullback.'
@@ -877,14 +913,23 @@
     var st = { price: rnd(85, 135) }, bars = [];
     var rangeLen = Math.floor(rnd(10, 16));
     pushContext(bars, st, padFor(rangeLen + 1), p);
+    var cf = bars.length;
     var center = st.price, halfW = p.vol * rnd(1.5, 2.4);
     pushRange(bars, st, rangeLen, center, halfW, p);
+    var lf = bars.length - 3;
     var edge = center + dir * halfW;
     pushBar(bars, st, (edge + dir * p.vol * rnd(0.8, 1.5) * (p.conf / 1.5)) - st.price, p, p.wick * 0.45);
     var di = bars.length - 1;
     pushTrend(bars, st, ob(11), dir, p, rnd(0.55, 0.85));
     return {
       bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'rompimento',
+      ctxFrom: cf, locFrom: lf,
+      ctx: 'O preço passou vários candles preso entre duas bordas. Range é empate: comprador e vendedor se anulando. Enquanto isso, ordens de stop vão se acumulando dos dois lados das bordas — é esse combustível que faz o rompimento ser rápido.',
+      loc: dir > 0
+        ? 'Nos últimos candles o preço colou na borda de cima em vez de voltar para o meio. Preço que insiste no teto é pressão compradora se acumulando, não passeio aleatório.'
+        : 'Nos últimos candles o preço colou na borda de baixo em vez de voltar para o meio. Preço que insiste no piso é pressão vendedora se acumulando.',
+      gat: 'O candle fechou fora da borda e com corpo grande. Fechamento fora é o que separa rompimento de furo: o furo qualquer candle faz, o fechamento exige que o lado vencedor segure o preço até o fim do tempo gráfico.',
+      invalida: 'Se esse mesmo candle tivesse voltado para dentro do range antes de fechar, viraria fakeout — e a resposta certa passaria a ser não operar, ou operar o lado contrário.',
       pattern: dir > 0 ? 'Rompimento de máxima confirmado' : 'Rompimento de mínima confirmado',
       explain: 'O preço passou vários candles preso num range apertado e o candle atual fechou fora da borda com corpo grande. Rompimento com fechamento é o gatilho.',
       tip: 'Stop no meio do range (ou logo atrás da borda rompida). Se preferir risco menor, espere o reteste da borda — ele acontece na maioria das vezes.',
@@ -955,7 +1000,9 @@
     var st = { price: rnd(85, 135) }, bars = [];
     var legs = Math.floor(rnd(9, 13));
     pushContext(bars, st, padFor(legs + 1), p);
+    var cf = bars.length;
     pushTrend(bars, st, legs, dir, p, rnd(0.8, 1.05));
+    var lf = bars.length - 3;
     var prev = bars[bars.length - 1], o = st.price;
     var c = dir > 0
       ? Math.min(prev.o, prev.c) - p.vol * rnd(0.4, 0.9) * (p.conf / 1.5)
@@ -967,6 +1014,17 @@
     pushTrend(bars, st, ob(11), -dir, p, rnd(0.55, 0.85));
     return {
       bars: bars, decisionIndex: di, correct: dir > 0 ? 'sell' : 'buy', family: 'exaustao',
+      ctxFrom: cf, locFrom: lf,
+      ctx: dir > 0
+        ? 'Conte os candles: o preço subiu muitos seguidos sem uma correção decente. Isso não é força infinita — é gente comprando cada vez mais caro. A cada candle sobra menos comprador disposto a pagar o preço novo.'
+        : 'Conte os candles: o preço caiu muitos seguidos sem um repique decente. Não é fraqueza infinita — é gente vendendo cada vez mais barato, e a cada candle sobra menos vendedor disposto a aceitar menos.',
+      loc: dir > 0
+        ? 'O preço está longe demais da média, esticado no topo do movimento. É o pior lugar do gráfico para comprar e o único lugar onde faz sentido procurar venda contra a tendência.'
+        : 'O preço está longe demais da média, esticado no fundo do movimento. Pior lugar para vender, único lugar onde faz sentido procurar compra contra a tendência.',
+      gat: dir > 0
+        ? 'O candle atual abriu perto da máxima e fechou engolindo o corpo do candle anterior. Todo mundo que comprou no candle passado está no prejuízo agora — e são essas pessoas saindo que alimentam a queda.'
+        : 'O candle atual abriu perto da mínima e fechou engolindo o corpo do anterior. Todo mundo que vendeu no candle passado está no prejuízo — e são essas recompras que alimentam a alta.',
+      invalida: 'Se esse candle tivesse apenas um pavio de rejeição, mas fechasse ainda a favor da tendência, não haveria entrada nenhuma: seria adivinhar topo, que é o jeito mais caro de operar.',
       pattern: dir > 0 ? 'Exaustão no topo — candle de reversão' : 'Exaustão no fundo — candle de reversão',
       explain: dir > 0
         ? 'Depois de um movimento longo sem correção, o candle atual abriu na máxima e fechou engolindo o corpo anterior. Compradores perderam o controle: reversão confirmada.'
@@ -999,6 +1057,7 @@
     var st = { price: rnd(90, 130) }, bars = [];
     var approach = Math.floor(rnd(5, 8));
     pushContext(bars, st, padFor(approach + 2), p);
+    var cf = Math.max(0, bars.length - 18), lf = bars.length;
     var level = dir > 0 ? lastLow(bars, 16) : lastHigh(bars, 16);
     pushToward(bars, st, level + dir * p.vol * rnd(1.0, 1.8), approach, p);
     var o = st.price, c = level + dir * p.vol * rnd(1.0, 1.7) * (p.conf / 1.5);
@@ -1013,6 +1072,19 @@
     pushTrend(bars, st, ob(11), dir, p, rnd(0.55, 0.85));
     return {
       bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'nivel',
+      ctxFrom: cf, locFrom: lf,
+      ctx: dir > 0
+        ? 'O nível desenhado não é uma linha qualquer: é o fundo onde o preço já parou antes nesse mesmo gráfico. Ele existe porque alguém defendeu o preço ali — e quem defendeu costuma defender de novo.'
+        : 'O nível desenhado é o topo onde o preço já foi barrado antes nesse mesmo gráfico. Ele existe porque alguém vendeu ali com força — e quem vendeu costuma vender de novo.',
+      loc: dir > 0
+        ? 'O preço veio de cima e chegou no nível depois de vários candles caindo. Chegar cansado num suporte é diferente de chegar colado nele: quanto mais longe veio, mais gente com lucro para realizar na ponta vendida.'
+        : 'O preço veio de baixo e chegou na resistência depois de vários candles subindo. Chegar esticado num topo conhecido é o que dá valor ao teste.',
+      gat: dir > 0
+        ? 'O candle deixou um pavio furando o nível e fechou com corpo forte para cima. O pavio é a prova de que testaram o nível e foram rejeitados; o fechamento é a prova de que quem defendeu ganhou o candle.'
+        : 'O candle deixou um pavio furando o nível para cima e fechou com corpo forte para baixo. Testaram o topo, foram rejeitados, e o fechamento entregou o candle para o vendedor.',
+      invalida: dir > 0
+        ? 'Se o candle tivesse fechado abaixo do nível, o suporte teria virado resistência: em vez de comprar, o trade passaria a ser vender o reteste dele por baixo.'
+        : 'Se o candle tivesse fechado acima do nível, a resistência viraria suporte: em vez de vender, o trade passaria a ser comprar o reteste dela por cima.',
       pattern: dir > 0 ? 'Reação confirmada no suporte' : 'Rejeição confirmada na resistência',
       explain: dir > 0
         ? 'O preço chegou no suporte, deixou um pavio abaixo dele e fechou com corpo forte para cima. Tocar não basta — o que vale é o candle de reação, e ele veio.'
@@ -1063,28 +1135,131 @@
     };
   };
 
+  SETUPS.rompimentoReteste = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var rangeLen = Math.floor(rnd(9, 14));
+    pushContext(bars, st, padFor(rangeLen + 6), p);
+    var cf = bars.length;
+    var center = st.price, halfW = p.vol * rnd(1.4, 2.2);
+    pushRange(bars, st, rangeLen, center, halfW, p);
+    var edge = center + dir * halfW;
+    pushBar(bars, st, (edge + dir * p.vol * rnd(1.0, 1.6)) - st.price, p, p.wick * 0.5);
+    var lf = bars.length;
+    pushToward(bars, st, edge + dir * p.vol * rnd(0.05, 0.3), Math.floor(rnd(2, 4)), p);
+    pushBar(bars, st, (edge + dir * p.vol * rnd(1.1, 1.8) * (p.conf / 1.5)) - st.price, p, p.wick * 0.45);
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(11), dir, p, rnd(0.55, 0.85));
+    return {
+      bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'rompimento',
+      ctxFrom: cf, locFrom: lf,
+      ctx: 'Duas coisas já aconteceram aqui: o preço ficou preso num range e depois rompeu a borda com um candle forte. Quem entrou naquele candle pagou caro e ficou com o stop lá no meio do range.',
+      loc: dir > 0
+        ? 'Agora o preço voltou para encostar na borda rompida, mas por cima dela. O teto virou piso — é a troca de papéis, o momento em que o mercado confere se o rompimento era verdade.'
+        : 'Agora o preço voltou para encostar na borda rompida, mas por baixo dela. O piso virou teto — o mercado está conferindo se a perda do suporte era verdade.',
+      gat: dir > 0
+        ? 'O candle atual saiu do reteste para cima. É o mesmo trade do rompimento, só que entrando colado no nível: mesmo alvo, stop bem mais curto, R bem melhor.'
+        : 'O candle atual saiu do reteste para baixo. Mesmo trade do rompimento, entrada colada no nível, stop muito mais curto.',
+      invalida: dir > 0
+        ? 'Se no reteste o preço tivesse fechado de volta dentro do range, o rompimento teria sido falso — e aí o trade seria justamente o contrário.'
+        : 'Se no reteste o preço tivesse fechado de volta dentro do range, a perda do suporte teria sido falsa — e o trade seria o contrário.',
+      pattern: dir > 0 ? 'Reteste do rompimento de máxima' : 'Reteste do rompimento de mínima',
+      explain: 'O preço rompeu a borda do range, voltou para testá-la por dentro e foi rejeitado de volta na direção do rompimento. A borda antiga virou apoio — é a entrada mais barata do rompimento.',
+      tip: 'O reteste dá o melhor risco/retorno do setup: stop logo do outro lado da borda, bem mais curto que no candle de rompimento. Se o reteste fechar de volta dentro do range, o rompimento falhou — saia.',
+      support: center - halfW, resistance: center + halfW,
+      supLabel: 'Base do range', resLabel: 'Topo do range'
+    };
+  };
+
+  SETUPS.duploFundo = function (p, dir) {
+    var st = { price: rnd(90, 130) }, bars = [];
+    var n1 = Math.floor(rnd(5, 8)), n2 = Math.floor(rnd(3, 5)), n3 = Math.floor(rnd(3, 5));
+    pushContext(bars, st, padFor(n1 + n2 + n3 + 1), p);
+    var cf = bars.length;
+    var level = st.price - dir * p.vol * rnd(3.5, 5.5);
+    pushToward(bars, st, level, n1, p);
+    var neck = level + dir * p.vol * rnd(2.0, 3.0);
+    pushToward(bars, st, neck, n2, p);
+    var lf = bars.length;
+    pushToward(bars, st, level + dir * p.vol * rnd(0.02, 0.25), n3, p);
+    pushBar(bars, st, (neck + dir * p.vol * rnd(0.25, 0.7) * (p.conf / 1.5)) - st.price, p, p.wick * 0.5);
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(11), dir, p, rnd(0.55, 0.85));
+    return {
+      bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'nivel',
+      ctxFrom: cf, locFrom: lf,
+      ctx: dir > 0
+        ? 'O preço veio caindo e parou num nível. Subiu um pouco, voltou ao mesmo nível e parou de novo. São duas tentativas do vendedor de furar aquele fundo — e duas falhas. Padrão de fundo duplo é isso: uma história de fracasso do vendedor.'
+        : 'O preço veio subindo e parou num nível. Recuou, voltou ao mesmo nível e parou de novo. Duas tentativas do comprador de furar o topo, duas falhas.',
+      loc: dir > 0
+        ? 'Entre os dois fundos existe um topo — o pescoço. Enquanto o preço estiver abaixo dele, isso é só um desenho bonito. Acima dele, vira estrutura quebrada a favor do comprador.'
+        : 'Entre os dois topos existe um fundo — o pescoço. Enquanto o preço estiver acima dele, é só desenho. Abaixo, vira estrutura quebrada a favor do vendedor.',
+      gat: dir > 0
+        ? 'O candle fechou acima do pescoço. Quem defendeu o fundo duas vezes finalmente tomou o controle, e quem vendeu esperando o rompimento para baixo está agora recomprando — é isso que empurra o preço.'
+        : 'O candle fechou abaixo do pescoço. Quem barrou o topo duas vezes tomou o controle, e quem comprou esperando o rompimento para cima está vendendo.',
+      invalida: dir > 0
+        ? 'Se o segundo fundo tivesse fechado abaixo do primeiro, não haveria fundo duplo nenhum: seria continuação de queda, e comprar ali seria pegar faca caindo.'
+        : 'Se o segundo topo tivesse fechado acima do primeiro, não haveria topo duplo: seria continuação de alta, e vender ali seria brigar com a tendência.',
+      pattern: dir > 0 ? 'Fundo duplo — rompimento do pescoço' : 'Topo duplo — perda do pescoço',
+      explain: dir > 0
+        ? 'O preço testou o mesmo fundo duas vezes sem perdê-lo e agora fechou acima do topo que separava os dois fundos. Vendedor tentou duas vezes e não passou: o gatilho é a perda desse pescoço para cima.'
+        : 'O preço testou o mesmo topo duas vezes sem superá-lo e agora fechou abaixo do fundo que separava os dois topos. Comprador tentou duas vezes e não passou: o gatilho é a perda do pescoço para baixo.',
+      tip: 'Stop além do segundo fundo (ou topo), nunca no meio do padrão. O alvo natural é a altura do padrão projetada a partir do pescoço — costuma dar 2R ou mais.',
+      support: dir > 0 ? level : null, resistance: dir > 0 ? null : level,
+      supLabel: 'Fundo duplo', resLabel: 'Topo duplo'
+    };
+  };
+
+  SETUPS.squeeze = function (p, dir) {
+    var st = { price: rnd(85, 135) }, bars = [];
+    var n = Math.floor(rnd(12, 18));
+    pushContext(bars, st, padFor(n + 1), p);
+    var cf = bars.length;
+    var center = st.price, w0 = p.vol * rnd(2.4, 3.2), w1 = p.vol * rnd(0.6, 0.95);
+    for (var i = 0; i < n; i++) pushRange(bars, st, 1, center, w0 + (w1 - w0) * (i / (n - 1)), p);
+    var lf = bars.length - 4;
+    var edge = center + dir * w1;
+    pushBar(bars, st, (edge + dir * p.vol * rnd(1.3, 2.0) * (p.conf / 1.5)) - st.price, p, p.wick * 0.45);
+    var di = bars.length - 1;
+    pushTrend(bars, st, ob(11), dir, p, rnd(0.6, 0.95));
+    return {
+      bars: bars, decisionIndex: di, correct: dir > 0 ? 'buy' : 'sell', family: 'rompimento',
+      ctxFrom: cf, locFrom: lf,
+      ctx: 'Olhe o tamanho dos candles da esquerda para a direita: eles foram encolhendo. Amplitude caindo quer dizer discordância acabando — os dois lados estão parando de brigar e o mercado está juntando energia para escolher um lado.',
+      loc: 'No fim do aperto os candles estão minúsculos e colados uns nos outros. É exatamente aqui que o stop fica mais barato de toda a estrutura: pouco espaço entre a entrada e o ponto que prova que você errou.',
+      gat: 'O candle atual explodiu para fora do aperto, com corpo muito maior que a média dos anteriores. A escolha foi feita, e quem estava posicionado do lado errado precisa sair correndo — por isso esses movimentos costumam ser rápidos.',
+      invalida: 'Se o candle grande tivesse voltado para dentro do aperto antes de fechar, seria só um susto. Aperto de volatilidade dá muitos alarmes falsos: o fechamento fora é obrigatório.',
+      pattern: dir > 0 ? 'Aperto de volatilidade — rompimento de alta' : 'Aperto de volatilidade — rompimento de baixa',
+      explain: 'Os candles foram encolhendo até o mercado quase parar, e o candle atual explodiu para fora do aperto. Amplitude comprimida é energia acumulada: quando ela sai, costuma sair rápido.',
+      tip: 'Quanto mais apertado o final da consolidação, menor o stop e maior o potencial. Stop do outro lado do aperto; se o preço voltar para dentro dele, o movimento morreu.',
+      support: center - w1, resistance: center + w1,
+      supLabel: 'Base do aperto', resLabel: 'Topo do aperto'
+    };
+  };
+
   function poolFor(mode) {
     switch (mode) {
       case 'consolidacao':
       case 'rompimento':
-        return { entradas: [['rompimento', 1], ['rompimento', -1]],
+        return { entradas: [['rompimento', 1], ['rompimento', -1], ['rompimentoReteste', 1], ['rompimentoReteste', -1], ['squeeze', 1], ['squeeze', -1]],
                  esperas: [['rompimentoFalso', 1], ['rompimentoFalso', -1], ['rangeIndefinido', 1]] };
       case 'alta':
-        return { entradas: [['pullbackEntrada', 1], ['rompimento', 1], ['nivelReacao', 1], ['exaustao', 1]],
+        return { entradas: [['pullbackEntrada', 1], ['rompimento', 1], ['nivelReacao', 1], ['exaustao', 1], ['rompimentoReteste', 1], ['duploFundo', 1]],
                  esperas: [['pullbackAndando', 1], ['impulsoPerseguindo', 1], ['exaustaoSemConfirmacao', 1], ['nivelLonge', -1]] };
       case 'baixa':
-        return { entradas: [['pullbackEntrada', -1], ['rompimento', -1], ['nivelReacao', -1], ['exaustao', -1]],
+        return { entradas: [['pullbackEntrada', -1], ['rompimento', -1], ['nivelReacao', -1], ['exaustao', -1], ['rompimentoReteste', -1], ['duploFundo', -1]],
                  esperas: [['pullbackAndando', -1], ['impulsoPerseguindo', -1], ['exaustaoSemConfirmacao', -1], ['nivelLonge', 1]] };
       case 'pullback':
         return { entradas: [['pullbackEntrada', 1], ['pullbackEntrada', -1]],
                  esperas: [['pullbackAndando', 1], ['pullbackAndando', -1], ['impulsoPerseguindo', 1], ['impulsoPerseguindo', -1]] };
       case 'niveis':
-        return { entradas: [['nivelReacao', 1], ['nivelReacao', -1]],
+        return { entradas: [['nivelReacao', 1], ['nivelReacao', -1], ['duploFundo', 1], ['duploFundo', -1]],
                  esperas: [['nivelLonge', 1], ['nivelLonge', -1], ['nivelReacaoFraca', 1], ['nivelReacaoFraca', -1]] };
       default:
         return {
           entradas: [['pullbackEntrada', 1], ['pullbackEntrada', -1], ['rompimento', 1], ['rompimento', -1],
-                     ['nivelReacao', 1], ['nivelReacao', -1], ['exaustao', 1], ['exaustao', -1]],
+                     ['nivelReacao', 1], ['nivelReacao', -1], ['exaustao', 1], ['exaustao', -1],
+                     ['rompimentoReteste', 1], ['rompimentoReteste', -1], ['duploFundo', 1], ['duploFundo', -1],
+                     ['squeeze', 1], ['squeeze', -1]],
           esperas: [['pullbackAndando', 1], ['pullbackAndando', -1], ['rompimentoFalso', 1], ['rompimentoFalso', -1],
                     ['impulsoPerseguindo', 1], ['impulsoPerseguindo', -1], ['rangeIndefinido', 1],
                     ['exaustaoSemConfirmacao', 1], ['nivelLonge', 1], ['nivelLonge', -1], ['nivelReacaoFraca', 1]]
@@ -1241,6 +1416,18 @@
       s += '<text x="' + tx.toFixed(1) + '" y="' + (plotB + 15) + '" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="' + D.fs + '" fill="#5a6576">' + fmtAxisTime(o.clock0 || 0, i, tfMin) + '</text>';
     }
 
+    (o.zones || []).forEach(function (z) {
+      if (z.to < start || z.from > right) return;
+      var za = x(Math.max(z.from, start)) - slot / 2, zb = x(Math.min(z.to, right)) + slot / 2;
+      var zw = Math.max(0, zb - za);
+      s += '<rect x="' + za.toFixed(1) + '" y="' + plotT + '" width="' + zw.toFixed(1) + '" height="' + (plotB - plotT) + '" fill="' + z.fill + '"/>';
+      s += '<line x1="' + za.toFixed(1) + '" y1="' + plotT + '" x2="' + za.toFixed(1) + '" y2="' + plotB + '" stroke="' + z.color + '" stroke-width="1" stroke-opacity="0.5" stroke-dasharray="2 3"/>';
+      if (z.label) {
+        s += '<rect x="' + za.toFixed(1) + '" y="' + (plotB - 18) + '" width="' + Math.min(zw, 150).toFixed(1) + '" height="16" rx="3" fill="rgba(8,11,16,0.8)"/>';
+        s += '<text x="' + (za + 6).toFixed(1) + '" y="' + (plotB - 6) + '" font-family="IBM Plex Mono, monospace" font-size="' + (D.fs - 0.5) + '" fill="' + z.color + '">' + esc(z.label) + '</text>';
+      }
+    });
+
     if (o.shadeFrom != null && right > o.shadeFrom) {
       var sx = x(Math.max(o.shadeFrom, start));
       s += '<rect x="' + sx.toFixed(1) + '" y="' + plotT + '" width="' + Math.max(0, x(right) + slot / 2 - sx).toFixed(1) + '" height="' + (plotB - plotT) + '" fill="rgba(201,162,39,0.05)"/>';
@@ -1250,7 +1437,9 @@
       if (lv.v == null) return;
       var ly = y(lv.v);
       s += '<line x1="' + plotL + '" y1="' + ly.toFixed(1) + '" x2="' + plotR + '" y2="' + ly.toFixed(1) + '" stroke="#5b6b82" stroke-width="1" stroke-dasharray="4 4" stroke-opacity="0.9"/>';
-      s += '<text x="' + (plotR - 6) + '" y="' + (ly - 5).toFixed(1) + '" text-anchor="end" font-family="IBM Plex Mono, monospace" font-size="' + D.fs + '" fill="#8794a6">' + esc(lv.label) + '</text>';
+      var lblRight = o.callout && ly < plotT + 60;
+      s += '<text x="' + (lblRight ? (plotR - 6) : (plotL + 5)) + '" y="' + (ly - 5).toFixed(1) + '"' +
+        (lblRight ? ' text-anchor="end"' : '') + ' font-family="IBM Plex Mono, monospace" font-size="' + D.fs + '" fill="#8794a6">' + esc(lv.label) + '</text>';
     });
 
     if (o.position) {
@@ -1733,21 +1922,44 @@
   var CAF_TFS = ['M1', 'M5', 'M15', 'H1', 'H4'];
   var CAF_CATS = { buy: 'Compra', sell: 'Venda', brk: 'Saída de consolidação' };
 
+  var PER_CAT = 25, PER_TF = 5;
+
   var K = {
-    list: [], i: 0, scn: null, end: 0, sub: 4, frac: 1, phase: 'idle',
+    list: [], seq: [], p: 0, i: 0, scn: null, end: 0, sub: 4, frac: 1, phase: 'idle',
     timer: null, hold: null, pos: null, markers: [], scale: {}, playing: false,
-    done: {}, result: null
+    done: {}, result: null, steps: [], stepMode: true, filter: { cat: 'buy', tf: 'all' }
   };
 
   function kBuildList() {
-    var buys = [['pullbackEntrada', 1], ['nivelReacao', 1], ['exaustao', -1]];
-    var sells = [['pullbackEntrada', -1], ['nivelReacao', -1], ['exaustao', 1]];
-    var brks = [['rompimento', 1], ['rompimento', -1]];
-    var list = [], i;
-    for (i = 0; i < 10; i++) list.push({ cat: 'buy', tf: CAF_TFS[i % 5], fn: buys[i % 3][0], dir: buys[i % 3][1] });
-    for (i = 0; i < 10; i++) list.push({ cat: 'sell', tf: CAF_TFS[i % 5], fn: sells[i % 3][0], dir: sells[i % 3][1] });
-    for (i = 0; i < 10; i++) list.push({ cat: 'brk', tf: CAF_TFS[i % 5], fn: brks[i % 2][0], dir: brks[i % 2][1] });
+    var pools = {
+      buy:  [['pullbackEntrada', 1], ['nivelReacao', 1], ['rompimentoReteste', 1], ['duploFundo', 1], ['exaustao', -1]],
+      sell: [['pullbackEntrada', -1], ['nivelReacao', -1], ['rompimentoReteste', -1], ['duploFundo', -1], ['exaustao', 1]],
+      brk:  [['rompimento', 1], ['rompimento', -1], ['rompimentoReteste', 1], ['rompimentoReteste', -1], ['squeeze', 1], ['squeeze', -1]]
+    };
+    var list = [];
+    ['buy', 'sell', 'brk'].forEach(function (cat) {
+      var pool = pools[cat];
+      for (var j = 0; j < PER_CAT; j++) {
+        var s = pool[j % pool.length];
+        list.push({ cat: cat, tf: CAF_TFS[Math.floor(j / PER_TF)], fn: s[0], dir: s[1] });
+      }
+    });
     return list;
+  }
+
+  function kRebuildSeq(keepMaster) {
+    if (!K.list.length) K.list = kBuildList();
+    var master = keepMaster != null ? keepMaster : (K.seq.length ? K.seq[K.p] : -1);
+    K.seq = [];
+    for (var i = 0; i < K.list.length; i++) {
+      var it = K.list[i];
+      if (K.filter.cat !== 'all' && it.cat !== K.filter.cat) continue;
+      if (K.filter.tf !== 'all' && it.tf !== K.filter.tf) continue;
+      K.seq.push(i);
+    }
+    if (!K.seq.length) { K.filter.tf = 'all'; kRebuildSeq(master); return; }
+    var at = K.seq.indexOf(master);
+    K.p = at >= 0 ? at : 0;
   }
 
   function kStop() {
@@ -1760,33 +1972,86 @@
     Object.keys(K.done).forEach(function (idx) { var it = K.list[idx]; if (it) c[it.cat]++; });
     return c;
   }
+  var STEP_NAMES = ['Contexto', 'Localização', 'Gatilho', 'Risco'];
+
   function kCallout() {
     var side = K.scn.correct, cat = K.list[K.i].cat, title;
+    var stepTitles = { s1: '1 · CONTEXTO', s2: '2 · LOCALIZAÇÃO', s3: '3 · GATILHO' };
+    if (stepTitles[K.phase]) {
+      return { title: stepTitles[K.phase], sub: K.scn.pattern, color: K.phase === 's3' ? kColor() : '#e8c468' };
+    }
     if (cat === 'brk') title = side === 'buy' ? '▲ COMPRA NO ROMPIMENTO' : '▼ VENDA NO ROMPIMENTO';
     else title = side === 'buy' ? '▲ COMPRA AQUI' : '▼ VENDA AQUI';
     return { title: title, sub: K.scn.pattern, color: kColor() };
   }
-  function kRead() {
-    el('k-read').innerHTML =
-      '<p class="caf-lead"><strong>' + esc(K.scn.pattern) + '</strong></p>' +
-      '<p class="caf-lead">' + esc(K.scn.explain) + '</p>' +
-      '<p class="fb-tip" style="font-size:12px"><strong>Como operar:</strong> ' + esc(K.scn.tip) + '</p>';
+
+  function kAnalyze() {
+    var b = K.scn.bars, d = K.scn.decisionIndex, i;
+    var from = K.scn.ctxFrom != null ? clamp(K.scn.ctxFrom, 0, Math.max(0, d - 2)) : Math.max(0, d - 18);
+    var t = b[d], range = Math.max(t.h - t.l, 1e-9), body = Math.abs(t.c - t.o);
+    var sum = 0, n = 0;
+    for (i = Math.max(0, d - 10); i < d; i++) { sum += (b[i].h - b[i].l); n++; }
+    var avg = n ? sum / n : range;
+    var closes = [];
+    for (i = 0; i <= d; i++) closes.push(b[i].c);
+    var e9 = ema(closes, 9), e21 = ema(closes, 21);
+    return {
+      bars: d - from + 1,
+      netPct: (t.c - b[from].o) / b[from].o * 100,
+      bodyPct: body / range * 100,
+      closePos: (t.c - t.l) / range * 100,
+      sizeX: range / Math.max(avg, 1e-9),
+      emaUp: e9[d] > e21[d]
+    };
+  }
+
+  function kBuildSteps() {
+    var scn = K.scn, a = kAnalyze(), P = K.pos, up = scn.correct === 'buy';
+    var s1 = (scn.ctx || scn.explain) + ' Nos últimos ' + a.bars + ' candles o preço ' +
+      (a.netPct >= 0 ? 'subiu ' : 'caiu ') + Math.abs(a.netPct).toFixed(2).replace('.', ',') + '%, com a média de 9 ' +
+      (a.emaUp ? 'por cima' : 'por baixo') + ' da de 21.';
+    var s2 = scn.loc || scn.explain;
+    var s3 = (scn.gat || scn.explain) + ' Anatomia do candle de gatilho: o corpo ocupa ' + a.bodyPct.toFixed(0) +
+      '% do candle, o fechamento ficou no ' + (a.closePos > 66 ? 'terço superior' : (a.closePos < 34 ? 'terço inferior' : 'meio')) +
+      ' e ele é ' + a.sizeX.toFixed(1).replace('.', ',') + '× o tamanho médio dos candles anteriores.';
+    var risco = Math.abs(P.entry - P.stop), alvo = Math.abs(P.target - P.entry);
+    var s4 = 'Entrada em ' + P.entry.toFixed(2) + ', stop em ' + P.stop.toFixed(2) + ' — ' + (up ? 'abaixo' : 'acima') +
+      ' da estrutura que sustenta o setup. Se o preço chegar lá, não é azar: é a leitura tendo deixado de valer, e sair é o certo. ' +
+      'O risco é de ' + (risco / P.entry * 100).toFixed(2).replace('.', ',') + '% do preço e o alvo, de ' + (alvo / P.entry * 100).toFixed(2).replace('.', ',') + '% — exatamente ' + rr() + 'R. ' +
+      'Arriscando 1% da banca por operação, esse trade devolve ' + rr() + '% quando anda até o alvo; é por isso que dá para errar mais da metade das vezes e ainda terminar no lucro.';
+    return [s1, s2, s3, s4];
+  }
+
+  function kRead(active) {
+    if (!K.scn) return;
+    var html = '<p class="caf-lead"><strong>' + esc(K.scn.pattern) + '</strong></p>';
+    html += '<ol class="steps">' + STEP_NAMES.map(function (nm, i) {
+      return '<li class="step' + (i < active ? ' done' : '') + (i === active ? ' on' : '') + '">' +
+        '<span class="step-n">' + (i + 1) + '</span><span>' + nm + '</span></li>';
+    }).join('') + '</ol>';
+    if (active >= 0 && K.steps && K.steps[active]) html += '<p class="caf-lead">' + esc(K.steps[active]) + '</p>';
+    else html += '<p class="caf-lead">' + esc(K.scn.ctx || K.scn.explain) + '</p>';
+    if (active >= 3) html += '<p class="fb-tip" style="font-size:12px"><strong>Como operar:</strong> ' + esc(K.scn.tip) + '</p>';
+    el('k-read').innerHTML = html;
   }
   function kSync() {
-    var it = K.list[K.i];
+    var it = K.list[K.i], total = K.seq.length;
     el('k-chip-tf').textContent = TF[it.tf].label;
     el('k-chip-cat').textContent = CAF_CATS[it.cat];
-    el('k-chip-step').textContent = (K.i + 1) + ' / ' + K.list.length;
-    el('k-meta-step').textContent = (K.i + 1) + ' / ' + K.list.length;
+    el('k-chip-step').textContent = (K.p + 1) + ' / ' + total;
+    el('k-meta-step').textContent = (K.p + 1) + ' / ' + total;
     el('k-meta-tf').textContent = TF[it.tf].label;
     el('k-meta-cat').textContent = CAF_CATS[it.cat];
     el('k-zoom-lbl').textContent = CFG.zoom;
-    el('k-progress').style.width = (K.i / (K.list.length - 1) * 100).toFixed(1) + '%';
+    el('k-progress').style.width = (total > 1 ? (K.p / (total - 1) * 100) : 100).toFixed(1) + '%';
     var c = kSeen();
-    el('k-seen-buy').textContent = c.buy + ' / 10';
-    el('k-seen-sell').textContent = c.sell + ' / 10';
-    el('k-seen-brk').textContent = c.brk + ' / 10';
-    ['buy', 'sell', 'brk'].forEach(function (cat) { el('tab-' + cat).className = 'tab' + (it.cat === cat ? ' sel' : ''); });
+    el('k-seen-buy').textContent = c.buy + ' / ' + PER_CAT;
+    el('k-seen-sell').textContent = c.sell + ' / ' + PER_CAT;
+    el('k-seen-brk').textContent = c.brk + ' / ' + PER_CAT;
+    ['buy', 'sell', 'brk'].forEach(function (cat) { el('tab-' + cat).className = 'tab' + (K.filter.cat === cat ? ' sel' : ''); });
+    document.querySelectorAll('#caf-tfs .tab').forEach(function (t) {
+      t.className = 'tab' + (t.getAttribute('data-tf') === K.filter.tf ? ' sel' : '');
+    });
   }
   function kDraw() {
     if (!K.scn) return;
@@ -1797,23 +2062,31 @@
       end: K.end, frac: K.frac, zoom: CFG.zoom, offset: 0, scale: K.scale,
       levels: levels, clock0: K.scn.clock0, markers: K.markers
     };
-    if (K.phase === 'mark' || K.phase === 'play' || K.phase === 'result') {
-      o.position = K.pos;
+    var ph = K.phase, isStep = (ph === 's1' || ph === 's2' || ph === 's3' || ph === 's4');
+    if (isStep || ph === 'play' || ph === 'result') {
       o.entryLine = K.scn.decisionIndex;
-      o.shadeFrom = K.scn.decisionIndex;
       o.callout = kCallout();
+      if (ph === 's4' || ph === 'play' || ph === 'result') o.position = K.pos;
+      if (ph === 'play' || ph === 'result') o.shadeFrom = K.scn.decisionIndex;
     }
-    if (K.phase === 'mark') { o.highlight = K.scn.decisionIndex; o.highlightColor = kColor(); }
-    if ((K.phase === 'play' || K.phase === 'result') && K.pos) {
+    if (ph === 's1' && K.scn.ctxFrom != null) {
+      o.zones = [{ from: K.scn.ctxFrom, to: K.scn.decisionIndex, fill: 'rgba(201,162,39,0.07)', color: '#e8c468', label: '1 · Contexto' }];
+    }
+    if (ph === 's2' && K.scn.locFrom != null) {
+      o.zones = [{ from: K.scn.locFrom, to: K.scn.decisionIndex, fill: 'rgba(91,107,130,0.16)', color: '#8794a6', label: '2 · Localização' }];
+    }
+    if (ph === 's3' || ph === 's4') { o.highlight = K.scn.decisionIndex; o.highlightColor = kColor(); }
+    if ((ph === 'play' || ph === 'result') && K.pos) {
       var r = K.result ? K.result.r : rOf(K.pos, K.scn.bars[K.end].c);
       o.badge = { text: (K.result ? 'Encerrada  ' : 'Aberta  ') + fmtR(r), color: r >= 0 ? '#26a17b' : '#e2574c' };
     }
     drawChart('k-chart', K.scn.bars, o);
   }
-  function kLoad(i) {
+  function kLoadAt(p) {
     kStop();
-    if (!K.list.length) K.list = kBuildList();
-    K.i = clamp(i, 0, K.list.length - 1);
+    if (!K.seq.length) kRebuildSeq();
+    K.p = clamp(p, 0, K.seq.length - 1);
+    K.i = K.seq[K.p];
     var it = K.list[K.i];
     TF_OVERRIDE = it.tf;
     OUT_K = 3;
@@ -1827,19 +2100,20 @@
     K.sub = SUB; K.frac = 1; K.phase = 'run';
     el('k-pattern').hidden = true;
     el('k-fb').innerHTML = '';
-    kRead(); kSync(); kDraw();
+    kRead(-1); kSync(); kDraw();
   }
+  function stepMs() { return (K.phase === 's4' ? 5200 : 4400) / CFG.speed; }
   function kResume() {
     kStop();
     if (!K.playing) return;
     if (K.phase === 'run') K.timer = setInterval(kTickRun, (820 / CFG.speed) / SUB);
-    else if (K.phase === 'mark') K.hold = setTimeout(kAfterMark, 2400 / CFG.speed);
+    else if (/^s[1-4]$/.test(K.phase)) K.hold = setTimeout(kStepNext, stepMs());
     else if (K.phase === 'play') K.timer = setInterval(kTickPlay, Math.max(60, 150 / CFG.speed));
-    else if (K.phase === 'result') K.hold = setTimeout(kNext, 2600 / CFG.speed);
+    else if (K.phase === 'result') K.hold = setTimeout(kNext, 3200 / CFG.speed);
   }
   function kPlay() {
     if (K.playing) { kPause(); return; }
-    if (!K.scn) kLoad(0);
+    if (!K.scn) kLoadAt(0);
     K.playing = true;
     el('k-play').textContent = '⏸ Pausar';
     el('k-flag').hidden = false;
@@ -1861,14 +2135,24 @@
   }
   function kEnterMark() {
     kStop();
-    K.end = K.scn.decisionIndex; K.frac = 1; K.sub = SUB; K.phase = 'mark';
+    K.end = K.scn.decisionIndex; K.frac = 1; K.sub = SUB;
     K.pos = tradePlan(K.scn.bars, K.scn.decisionIndex, K.scn.correct);
     K.pos.closed = false;
     K.markers = [{ idx: K.scn.decisionIndex, price: K.pos.entry, side: K.scn.correct, kind: 'entry' }];
+    K.steps = kBuildSteps();
     el('k-pattern-text').textContent = K.scn.pattern;
     el('k-pattern').hidden = false;
-    kDraw();
-    if (K.playing) K.hold = setTimeout(kAfterMark, 2400 / CFG.speed);
+    K.phase = K.stepMode ? 's1' : 's4';
+    kDraw(); kRead(K.stepMode ? 0 : 3);
+    if (K.playing) K.hold = setTimeout(kStepNext, stepMs());
+  }
+  function kStepNext() {
+    var order = ['s1', 's2', 's3', 's4'];
+    var at = order.indexOf(K.phase);
+    if (at < 0 || at === 3) { kAfterMark(); return; }
+    K.phase = order[at + 1];
+    kDraw(); kRead(at + 1);
+    if (K.playing) K.hold = setTimeout(kStepNext, stepMs());
   }
   function kAfterMark() {
     K.phase = 'play'; kDraw();
@@ -1894,42 +2178,45 @@
     kDraw(); kSync();
     var extra = r >= 0
       ? '<p>Guarde o formato: é esse desenho que você quer reconhecer antes do candle fechar.</p>'
-      : '<p>Mesmo o setup certo perde às vezes — por isso o stop entra junto com a ordem. Um exemplo perdedor não invalida a leitura.</p>';
+      : '<p>Mesmo o setup certo perde às vezes — por isso o stop entra junto com a ordem. Um exemplo perdedor não invalida a leitura: o que invalida é operar sem os quatro passos.</p>';
+    var inval = K.scn.invalida ? '<p class="fb-tip" style="border-left-color:var(--bear);background:var(--bear-soft)"><strong style="color:var(--bear)">O que invalidaria:</strong> ' + esc(K.scn.invalida) + '</p>' : '';
     el('k-fb').innerHTML =
       '<div class="fb ' + (r >= 0 ? 'ok' : 'no') + '"><div class="fb-head">' +
-      '<span>Exemplo ' + (K.i + 1) + ' — saída no ' + esc(K.result.why) + '</span>' +
+      '<span>Exemplo ' + (K.p + 1) + ' — saída no ' + esc(K.result.why) + '</span>' +
       '<span class="result-chip ' + (r >= 0 ? 'up' : 'down') + '">' + fmtR(r) + '</span></div>' +
-      '<div class="fb-body"><p>' + esc(K.scn.explain) + '</p>' + extra +
+      '<div class="fb-body"><p>' + esc(K.scn.explain) + '</p>' + extra + inval +
       '<p class="fb-tip"><strong>Como operar:</strong> ' + esc(K.scn.tip) + '</p></div></div>';
     if (K.playing) K.hold = setTimeout(kNext, 2600 / CFG.speed);
   }
   function kNext() {
-    if (K.i >= K.list.length - 1) { kFinish(); return; }
+    if (K.p >= K.seq.length - 1) { kFinish(); return; }
     var wasPlaying = K.playing;
-    kLoad(K.i + 1);
+    kLoadAt(K.p + 1);
     K.playing = wasPlaying;
     if (wasPlaying) kResume();
   }
   function kPrev() {
     var wasPlaying = K.playing;
-    kLoad(Math.max(0, K.i - 1));
+    kLoadAt(Math.max(0, K.p - 1));
     K.playing = wasPlaying;
     if (wasPlaying) kResume();
   }
   function kFinish() {
     kPause();
+    var tfTxt = K.filter.tf === 'all' ? 'em M1, M5, M15, H1 e H4' : 'no gráfico de ' + TF[K.filter.tf].label;
+    var catTxt = CAF_CATS[K.filter.cat].toLowerCase();
     el('k-fb').innerHTML =
-      '<div class="fb neutral"><div class="fb-head"><span>Série concluída — 30 exemplos</span></div>' +
-      '<div class="fb-body"><p class="caf-done">Você viu dez compras, dez vendas e dez saídas de consolidação em M1, M5, M15, H1 e H4.</p>' +
-      '<p class="fb-tip"><strong>Próximo passo:</strong> vá para o Treino ou o Desafio e tente achar esses mesmos formatos sem a marcação na tela. Reconhecer é fácil; decidir no escuro é o que dá dinheiro.</p></div></div>' +
+      '<div class="fb neutral"><div class="fb-head"><span>Série concluída — ' + K.seq.length + ' exemplos</span></div>' +
+      '<div class="fb-body"><p class="caf-done">Você viu ' + K.seq.length + ' exemplos de ' + esc(catTxt) + ' ' + tfTxt + '.</p>' +
+      '<p class="fb-tip"><strong>Próximo passo:</strong> troque de categoria ou de tempo gráfico aqui em cima, ou vá para o Treino e tente achar esses mesmos formatos sem a marcação na tela. Reconhecer é fácil; decidir no escuro é o que dá dinheiro.</p></div></div>' +
       '<button class="next-btn" id="k-again" type="button">Rodar a série de novo</button>';
-    el('k-again').onclick = function () { K.done = {}; kLoad(0); kPlay(); };
+    el('k-again').onclick = function () { K.done = {}; kLoadAt(0); kPlay(); };
   }
 
   /* ===================== GRÁFICOS AO VIVO (TRADINGVIEW) ===================== */
 
   var LIVE = {
-    n: 1, emas: true, built: false,
+    n: 1, emas: true, built: false, rendered: [null, null, null],
     slots: [
       { symbol: 'OANDA:XAUUSD', interval: '5' },
       { symbol: 'BINANCE:BTCUSDT', interval: '15' },
@@ -2036,10 +2323,31 @@
       });
     } catch (e) { liveFallback(); }
   }
+  function liveKey(i) { return LIVE.slots[i].symbol + '|' + LIVE.slots[i].interval + '|' + (LIVE.emas ? '1' : '0'); }
+  function liveBuildDom() {
+    var grid = el('live-grid');
+    if (grid.getAttribute('data-built') === '1') return;
+    var html = '';
+    for (var i = 0; i < 3; i++) {
+      html += '<div class="live-slot" id="slot' + i + '" hidden>' +
+        '<div class="live-slot-head" id="slothead' + i + '"></div>' +
+        '<div class="tv-box" id="tvbox' + i + '"></div></div>';
+    }
+    grid.innerHTML = html;
+    grid.setAttribute('data-built', '1');
+  }
+  function liveHead(i) {
+    var sl = LIVE.slots[i];
+    el('slothead' + i).innerHTML =
+      '<span class="sym">' + esc(sl.symbol) + '</span>' +
+      '<span class="chip tf">' + esc(intLabel(sl.interval)) + '</span>' +
+      '<div class="head-right"><a class="mini-btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=' +
+      encodeURIComponent(sl.symbol) + '">Abrir no TradingView</a></div>';
+  }
   function liveFallback() {
     for (var i = 0; i < LIVE.n; i++) {
       var box = el('tvbox' + i);
-      if (!box) continue;
+      if (!box || LIVE.rendered[i]) continue;
       box.style.height = 'auto';
       box.innerHTML = '<div class="tv-fallback">' +
         '<p><strong>O gráfico do TradingView não carregou aqui.</strong></p>' +
@@ -2052,24 +2360,25 @@
     if (rt) rt.onclick = function () { tvState = 'idle'; liveRender(); };
   }
   function liveRender() {
-    var grid = el('live-grid');
+    liveBuildDom();
+    var grid = el('live-grid'), i;
     grid.className = 'live-grid n' + LIVE.n;
-    var html = '', i;
-    for (i = 0; i < LIVE.n; i++) {
-      var sl = LIVE.slots[i];
-      html += '<div class="live-slot"><div class="live-slot-head">' +
-        '<span class="sym">' + esc(sl.symbol) + '</span>' +
-        '<span class="chip tf">' + esc(intLabel(sl.interval)) + '</span>' +
-        '<div class="head-right"><a class="mini-btn" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(sl.symbol) + '">Abrir no TradingView</a></div>' +
-        '</div><div class="tv-box" id="tvbox' + i + '"></div></div>';
-    }
-    grid.innerHTML = html;
+    for (i = 0; i < 3; i++) el('slot' + i).hidden = (i >= LIVE.n);
+    for (i = 0; i < LIVE.n; i++) liveHead(i);
     document.querySelectorAll('#live-tabs .tab').forEach(function (t) {
       t.className = 'tab' + (parseInt(t.getAttribute('data-n'), 10) === LIVE.n ? ' sel' : '');
     });
     tvLoad(function (ok) {
       if (!ok) { liveFallback(); return; }
-      for (var k = 0; k < LIVE.n; k++) tvWidget(k);
+      for (var k = 0; k < LIVE.n; k++) {
+        // só recria o gráfico que realmente mudou — assim os desenhos dos
+        // outros sobrevivem à troca de aba
+        if (LIVE.rendered[k] === liveKey(k)) continue;
+        var box = el('tvbox' + k);
+        box.innerHTML = ''; box.style.height = '';
+        tvWidget(k);
+        LIVE.rendered[k] = liveKey(k);
+      }
     });
   }
   function liveOpen() {
@@ -2146,7 +2455,7 @@
     if (name !== 'replay' && R.timer) rClear();
     if (name !== 'chal' && C.timer) cClear();
     if (name !== 'caf') { kPause(); TF_OVERRIDE = null; }
-    if (name === 'caf' && !K.scn) kLoad(0);
+    if (name === 'caf' && !K.scn) { kRebuildSeq(); kLoadAt(0); }
     if (name === 'chal' && !C.scn) cNewRound();
     if (name === 'replay' && !R.bars.length) rNewMarket();
     if (name === 'live') liveOpen();
@@ -2388,16 +2697,27 @@
   el('k-play').onclick = kPlay;
   el('k-next').onclick = kNext;
   el('k-prev').onclick = kPrev;
+  el('k-stepmode').onclick = function () {
+    K.stepMode = !K.stepMode;
+    el('k-stepmode').className = 'mini-btn' + (K.stepMode ? ' on' : '');
+    saveState();
+  };
   el('k-zoom-in').onclick = function () { setZoom(-1); };
   el('k-zoom-out').onclick = function () { setZoom(1); };
-  el('k-restart').onclick = function () { K.done = {}; kLoad(0); if (K.playing) kResume(); };
-  document.querySelectorAll('#view-caf .tab').forEach(function (t) {
-    t.onclick = function () {
-      var cat = t.getAttribute('data-cat');
-      var start = cat === 'buy' ? 0 : (cat === 'sell' ? 10 : 20);
-      var wasPlaying = K.playing;
-      kLoad(start); K.playing = wasPlaying; if (wasPlaying) kResume();
-    };
+  el('k-restart').onclick = function () { K.done = {}; kLoadAt(0); if (K.playing) kResume(); };
+  function kFilterTo(key, value) {
+    var wasPlaying = K.playing;
+    K.filter[key] = value;
+    kRebuildSeq(-1);
+    kLoadAt(0);
+    K.playing = wasPlaying;
+    if (wasPlaying) kResume();
+  }
+  document.querySelectorAll('#caf-tabs .tab').forEach(function (t) {
+    t.onclick = function () { kFilterTo('cat', t.getAttribute('data-cat')); };
+  });
+  document.querySelectorAll('#caf-tfs .tab').forEach(function (t) {
+    t.onclick = function () { kFilterTo('tf', t.getAttribute('data-tf')); };
   });
   document.querySelectorAll('#live-tabs .tab').forEach(function (t) {
     t.onclick = function () {
